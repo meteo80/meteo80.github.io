@@ -448,10 +448,13 @@ async function handleGenerate(){
 
   let prompt;
   if(searchType === 'name'){
-    prompt=`한국 골프장 전문가. 이름에 "${golfName}"이 포함된 전국 모든 골프장을 JSON으로만 반환. 마크다운 없이 순수 JSON만.
+    prompt=`한국 전국 골프장 데이터베이스에서 이름에 "${golfName}"이 포함된 골프장을 모두 찾아서 JSON으로만 반환. 마크다운 없이 순수 JSON만.
+
+중요: "${golfName}"이라는 단어가 이름 어디에든 포함된 골프장을 전국에서 빠짐없이 검색. 지역 제한 없음. 예를 들어 "보라"를 검색하면 보라CC(경기), 보라스프링스, 보라컨트리클럽 등 전국의 "보라" 포함 골프장 모두 반환.
+
 날짜=${dateStr}, 인원=${state.players}명
-{"region":"전국","searchDate":"${dateStr}","summary":"'${golfName}' 포함 전국 골프장 검색 결과","tags":["태그1","태그2","태그3"],"courses":[{"rank":1,"name":"정식명칭","type":"퍼블릭|회원제|세미퍼블릭","address":"주소","distanceFromCenter":"지역중심에서 차로N분","holes":"18홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1","특징2"],"greenFee":{"weekday":"12만원","weekend":"18만원","weekdayNum":120000,"weekendNum":180000,"cartFee":"팀당8만원","caddyFee":"팀당13만원"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"홈페이지","phone":"051-000-0000","advanceBooking":"2주전","availability":"가능성높음","tip":"꿀팁"},"facilities":["시설1"],"restaurants":[{"name":"식당명","category":"한식","menu":"대표메뉴","distance":"차로5분","naverSearch":"식당명 지역명"}],"recommended":true,"recommendReason":"추천이유"}]}
-규칙: 이름에 "${golfName}"이 포함된 전국 모든 골프장(지역 무관), 최대 10개, weekdayNum·weekendNum 숫자(원), 맛집 각 3개, 완전한 JSON만.`;
+{"region":"전국","searchDate":"${dateStr}","summary":"'${golfName}' 포함 전국 골프장 ${state.count}곳","tags":["키워드검색","전국","${golfName}"],"courses":[{"rank":1,"name":"정식명칭","type":"퍼블릭|회원제|세미퍼블릭","address":"도로명주소","distanceFromCenter":"지역중심에서 차로N분","holes":"18홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1","특징2"],"greenFee":{"weekday":"12만원","weekend":"18만원","weekdayNum":120000,"weekendNum":180000,"cartFee":"팀당8만원","caddyFee":"팀당13만원"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"홈페이지","phone":"051-000-0000","advanceBooking":"2주전","availability":"가능성높음","tip":"꿀팁"},"facilities":["시설1"],"restaurants":[{"name":"식당명","category":"한식","menu":"대표메뉴","distance":"차로5분","naverSearch":"식당명 지역명"}],"recommended":true,"recommendReason":"추천이유"}]}
+규칙: 이름에 "${golfName}" 포함된 전국 골프장 최대 ${state.count}개(지역 무관), weekdayNum·weekendNum 숫자(원), 맛집 각 2개, 완전한 JSON만.`;
   } else {
     prompt=`한국 골프장 전문가. 아래 조건 골프장을 JSON으로만 반환. 마크다운 없이 순수 JSON만.
 지역=${region}, 날짜=${dateStr}, 티타임=${state.teeTime}, 인원=${state.players}명, 난이도=${state.difficulty}, 타입=${state.courseType}, 예산=${state.budget}
@@ -520,9 +523,12 @@ async function fetchWeather(regionName, dateVal){
     const results = geoData.results || [];
     const loc = results.find(r => r.country_code === 'KR') || results[0];
     if(!loc) return;
-    const {latitude:lat, longitude:lon, name:locName, admin1} = loc;
-    // 위치명 표시 (예: "울주군, 울산")
-    document.getElementById('weatherLocation').textContent = `${locName}${admin1?', '+admin1:''} 날씨`;
+    const lat = loc.latitude;
+    const lon = loc.longitude;
+    const locName = loc.name || regionName;
+    const admin1 = loc.admin1 || '';
+    // 위치명 표시
+    document.getElementById('weatherLocation').textContent = `📍 ${locName}${admin1 ? ' · '+admin1 : ''}`;
     const wRes = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=Asia%2FSeoul&forecast_days=14`
     );
