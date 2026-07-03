@@ -795,17 +795,20 @@ function getRegionLabel(address){
 // ── 골프장명 자동완성 (카카오 로컬 API) ──
 let ddTimer = null;
 let selectedPlace = null;
+let isComposing = false;
 
 function onGolfNameInput(val){
   selectedPlace = null;
-  const dd = document.getElementById('golfDropdown');
-  if(!val || val.length < 1){ dd.style.display='none'; dd.innerHTML=''; return; }
-  // 즉시 로딩 표시
-  dd.innerHTML = '<div class="dd-loading">🔍 검색 중...</div>';
-  dd.style.display = 'block';
-  // 딜레이 없이 바로 검색
   clearTimeout(ddTimer);
-  ddTimer = setTimeout(()=> fetchGolfSuggest(val), 0);
+  // IME 조합 완료 후 실제 값 읽기 (150ms 후)
+  ddTimer = setTimeout(()=>{
+    const realVal = document.getElementById('golfName').value.trim();
+    const dd = document.getElementById('golfDropdown');
+    if(!realVal){ dd.style.display='none'; dd.innerHTML=''; return; }
+    dd.innerHTML = '<div class="dd-loading">🔍 검색 중...</div>';
+    dd.style.display = 'block';
+    fetchGolfSuggest(realVal);
+  }, 150);
 }
 
 async function fetchGolfSuggest(keyword){
