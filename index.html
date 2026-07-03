@@ -801,35 +801,56 @@ async function fetchGolfSuggest(keyword){
   dd.innerHTML = '<div class="dd-loading">🔍 검색 중...</div>';
   dd.style.display = 'block';
   try {
+    // 카테고리 제한 없이 키워드+골프 검색 (더 넓은 결과)
     const res = await fetch(
-      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(keyword+'골프장')}&size=15&category_group_code=SW8`,
+      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(keyword+'골프')}&size=15`,
       { headers:{ 'Authorization':'KakaoAK '+KAKAO_KEY } }
     );
     const data = await res.json();
-    const docs = data.documents || [];
+    // 골프장 관련 결과만 필터링
+    const docs = (data.documents || []).filter(p=>
+      p.place_name.includes(keyword) ||
+      p.category_name?.includes('골프') ||
+      p.place_name.includes('CC') ||
+      p.place_name.includes('컨트리')
+    );
     if(!docs.length){
-      dd.innerHTML = '<div class="dd-loading">검색 결과 없음</div>';
+      // 결과 없으면 category_group_code 없이 재검색
+      const res2 = await fetch(
+        `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(keyword+' 골프장')}&size=15`,
+        { headers:{ 'Authorization':'KakaoAK '+KAKAO_KEY } }
+      );
+      const data2 = await res2.json();
+      const docs2 = data2.documents || [];
+      if(!docs2.length){
+        dd.innerHTML = '<div class="dd-loading">검색 결과 없음</div>';
+        return;
+      }
+      dd.innerHTML = docs2.map((p,i) => `
+        <div class="dd-item" onclick="selectPlace(${i},'b')">
+          <span class="dd-name">${p.place_name}</span>
+          <span class="dd-addr">${p.address_name}</span>
+        </div>`).join('');
+      window._ddPlacesB = docs2;
       return;
     }
     dd.innerHTML = docs.map((p,i) => `
-      <div class="dd-item" onclick="selectPlace(${i})">
+      <div class="dd-item" onclick="selectPlace(${i},'a')">
         <span class="dd-name">${p.place_name}</span>
         <span class="dd-addr">${p.address_name}</span>
       </div>`).join('');
-    // 전역 저장
     window._ddPlaces = docs;
   } catch(e){
-    dd.innerHTML = '<div class="dd-loading">검색 오류</div>';
+    dd.innerHTML = '<div class="dd-loading">검색 오류 - 직접 검색 버튼을 이용해주세요</div>';
   }
 }
 
-function selectPlace(idx){
-  const place = window._ddPlaces[idx];
+function selectPlace(idx, src){
+  const place = src==='b' ? window._ddPlacesB?.[idx] : window._ddPlaces?.[idx];
   if(!place) return;
   selectedPlace = place;
   document.getElementById('golfName').value = place.place_name;
   document.getElementById('golfDropdown').style.display = 'none';
-  // 선택 즉시 검색
   handleGenerate();
 }
 
