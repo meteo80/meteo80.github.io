@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>AI 골프장 찾기</title>
+
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#16A34A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="골프장 찾기">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+
+<!-- SEO -->
+<meta name="description" content="AI가 추천하는 전국 골프장 검색, 그린피, 예약정보, 날씨까지 한번에">
+<meta property="og:title" content="AI 골프장 찾기">
+<meta property="og:description" content="AI가 추천하는 골프장 검색 & 예약 정보">
+<meta property="og:type" content="website">
+
+<!-- Google AdSense (발급 후 ca-pub-XXXXXXXX 교체) -->
+<!-- <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script> -->
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;min-height:100vh;background:linear-gradient(160deg,#D1FAE5 0%,#F0FDF4 55%,#ECFDF5 100%);}
+.screen{display:none;min-height:100vh;}
+.screen.active{display:block;}
+
+/* ── API 키 모달 ── */
+.modal-box{background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.2);}
+.modal-box h2{font-size:18px;font-weight:800;color:#1E293B;margin-bottom:6px;}
+.modal-box p{font-size:13px;color:#64748B;line-height:1.7;margin-bottom:16px;}
+.modal-box a{color:#16A34A;text-decoration:none;font-weight:600;}
+.modal-box input{width:100%;padding:12px 14px;border:2px solid #E2E8F0;border-radius:10px;font-size:14px;outline:none;font-family:monospace;transition:border-color .2s;}
+.modal-box input:focus{border-color:#16A34A;}
+.modal-btn{width:100%;margin-top:12px;padding:14px;background:linear-gradient(135deg,#16A34A,#059669);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;}
+
+/* ── 입력 화면 ── */
+#inputScreen{padding:28px 16px 48px;}
+.header{text-align:center;margin-bottom:28px;}
+.header .icon{font-size:52px;line-height:1;display:block;}
+.header h1{font-size:26px;font-weight:900;color:#1E293B;margin:10px 0 4px;letter-spacing:-.5px;}
+.header p{color:#64748B;font-size:14px;}
+.ai-badge{display:inline-flex;align-items:center;gap:5px;background:#F0FDF4;border:1px solid #86EFAC;border-radius:20px;padding:4px 12px;font-size:12px;color:#16A34A;font-weight:600;margin-top:8px;}
+.card{background:#fff;border-radius:22px;padding:24px 20px;box-shadow:0 8px 32px rgba(0,0,0,.09);max-width:460px;margin:0 auto;}
+.field{margin-bottom:22px;}
+.field label{display:block;font-size:14px;font-weight:700;color:#374151;margin-bottom:8px;}
+.field input[type=text]{width:100%;padding:12px 14px;border:2px solid #E2E8F0;border-radius:12px;font-size:15px;color:#1E293B;background:#F8FAFC;outline:none;font-family:inherit;transition:border-color .2s;}
+.field input[type=text]:focus{border-color:#16A34A;}
+.field input[type=date]{width:100%;padding:12px 14px;border:2px solid #E2E8F0;border-radius:12px;font-size:15px;color:#1E293B;background:#F8FAFC;outline:none;font-family:inherit;transition:border-color .2s;}
+.field input[type=date]:focus{border-color:#16A34A;}
+.error-msg{color:#EF4444;font-size:13px;font-weight:600;margin-top:5px;display:none;}
+.toggle-btns{display:flex;gap:7px;flex-wrap:wrap;}
+.toggle-btn{flex:1;min-width:70px;padding:11px 0;border:2px solid #E2E8F0;border-radius:10px;background:#FAFAFA;color:#6B7280;font-size:13px;cursor:pointer;font-family:inherit;transition:all .2s;}
+.toggle-btn.sel{border-color:#16A34A;background:#F0FDF4;color:#16A34A;font-weight:800;}
+.counter-row{display:flex;gap:14px;}
+.counter-box{flex:1;background:#F8FAFC;border-radius:12px;padding:12px 14px;}
+.counter-box .clabel{font-size:13px;color:#64748B;margin-bottom:8px;font-weight:600;}
+.counter-ctrl{display:flex;align-items:center;justify-content:space-between;}
+.cnt-btn{width:32px;height:32px;border:2px solid #E2E8F0;border-radius:8px;background:#fff;font-size:16px;cursor:pointer;color:#6B7280;display:flex;align-items:center;justify-content:center;}
+.cnt-val{font-size:20px;font-weight:800;color:#1E293B;}
+.cta-btn{width:100%;padding:17px;border:none;border-radius:14px;cursor:pointer;background:linear-gradient(135deg,#16A34A 0%,#059669 100%);color:#fff;font-size:17px;font-weight:800;box-shadow:0 6px 20px rgba(22,163,74,.32);font-family:inherit;transition:opacity .2s;}
+.cta-btn:active{opacity:.85;}
+
+/* ── 로딩 ── */
+#loadingScreen{display:none;min-height:100vh;background:linear-gradient(160deg,#052e16 0%,#16A34A 55%,#059669 100%);flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;}
+#loadingScreen.active{display:flex;}
+.load-icon{font-size:72px;display:block;margin-bottom:20px;animation:swing 2s ease-in-out infinite;}
+.load-title{color:#fff;font-size:22px;font-weight:800;margin-bottom:8px;}
+.load-sub{color:rgba(255,255,255,.65);font-size:14px;margin-bottom:40px;}
+.load-steps{text-align:left;width:100%;max-width:280px;}
+.load-step{display:flex;align-items:center;gap:12px;padding:9px 0;}
+.step-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.2);transition:background .4s;flex-shrink:0;}
+.step-dot.on{background:#A7F3D0;}
+.step-text{color:rgba(255,255,255,.4);font-size:14px;transition:color .4s;}
+.step-text.on{color:#fff;}
+@keyframes swing{0%,100%{transform:rotate(-15deg);}50%{transform:rotate(15deg);}}
+
+/* ── 결과 화면 ── */
+#resultScreen{display:none;min-height:100vh;background:#F0FDF4;}
+#resultScreen.active{display:block;}
+
+.result-hero{background:linear-gradient(150deg,#052e16 0%,#16A34A 100%);padding:28px 20px 32px;position:relative;overflow:hidden;}
+.result-hero::before{content:'⛳';position:absolute;top:-20px;right:-10px;font-size:120px;opacity:.08;line-height:1;}
+.hero-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+.hero-badge{font-size:11px;color:rgba(255,255,255,.6);font-weight:700;letter-spacing:1px;margin-bottom:6px;}
+.hero-title{color:#fff;font-size:21px;font-weight:900;margin:0 0 5px;line-height:1.3;}
+.hero-sub{color:rgba(255,255,255,.75);font-size:13px;}
+.reset-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:8px 13px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;margin-left:12px;flex-shrink:0;font-family:inherit;position:relative;z-index:2;}
+.hero-tags{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;}
+.hero-tag{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:4px 11px;font-size:12px;color:#fff;}
+
+/* 필터 바 */
+.filter-bar{background:#fff;padding:12px 16px;display:flex;gap:8px;overflow-x:auto;box-shadow:0 2px 8px rgba(0,0,0,.06);scrollbar-width:none;}
+.filter-bar::-webkit-scrollbar{display:none;}
+.filter-chip{padding:7px 14px;border:1.5px solid #E2E8F0;border-radius:20px;background:#FAFAFA;color:#6B7280;font-size:13px;cursor:pointer;white-space:nowrap;font-family:inherit;transition:all .2s;}
+.filter-chip.on{border-color:#16A34A;background:#F0FDF4;color:#16A34A;font-weight:700;}
+
+/* 결과 요약 */
+.result-count{padding:14px 16px 4px;font-size:13px;color:#64748B;font-weight:600;}
+.result-count span{color:#16A34A;font-weight:800;}
+
+/* 골프장 카드 */
+.courses-list{padding:8px 16px 40px;display:flex;flex-direction:column;gap:16px;}
+.course-card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 3px 16px rgba(0,0,0,.08);border:1.5px solid #F1F5F9;}
+.course-card.recommended{border-color:#16A34A;}
+
+.card-header{padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:flex-start;}
+.card-rank{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#16A34A,#059669);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.card-rank.gold{background:linear-gradient(135deg,#F59E0B,#D97706);}
+.recommended-badge{background:#F0FDF4;border:1px solid #86EFAC;border-radius:20px;padding:3px 10px;font-size:11px;color:#16A34A;font-weight:700;}
+
+.card-name{font-size:18px;font-weight:900;color:#1E293B;padding:0 16px 4px;}
+.card-addr{font-size:13px;color:#64748B;padding:0 16px 12px;display:flex;align-items:center;gap:4px;}
+
+.card-chips{display:flex;gap:6px;flex-wrap:wrap;padding:0 16px 14px;}
+.chip{padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;}
+.chip-type{background:#F0FDF4;color:#16A34A;}
+.chip-hole{background:#EFF6FF;color:#2563EB;}
+.chip-diff{background:#FFF7ED;color:#EA580C;}
+.chip-caddie{background:#F5F3FF;color:#7C3AED;}
+
+/* 그린피 */
+.fee-row{background:#F8FAFC;margin:0 16px 14px;border-radius:12px;padding:12px 14px;}
+.fee-title{font-size:12px;color:#94A3B8;font-weight:600;margin-bottom:8px;}
+.fee-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.fee-item{text-align:center;}
+.fee-label{font-size:11px;color:#64748B;margin-bottom:2px;}
+.fee-price{font-size:15px;font-weight:800;color:#1E293B;}
+.fee-price.highlight{color:#16A34A;}
+
+/* 예약 정보 */
+.booking-section{border-top:1px solid #F1F5F9;padding:14px 16px;}
+.booking-title{font-size:13px;font-weight:700;color:#374151;margin-bottom:10px;}
+.booking-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #F8FAFC;}
+.booking-row:last-child{border-bottom:none;}
+.b-label{font-size:13px;color:#64748B;}
+.b-value{font-size:13px;font-weight:700;color:#1E293B;}
+.b-value.green{color:#16A34A;}
+.b-value.red{color:#EF4444;}
+
+/* 팁 박스 */
+.tip-box{background:#F0FDF4;border-left:3px solid #16A34A;border-radius:0 10px 10px 0;margin:0 16px 16px;padding:10px 12px;font-size:13px;color:#14532D;line-height:1.5;}
+
+/* 전화/예약 버튼 */
+.card-actions{display:flex;gap:8px;padding:0 16px 16px;}
+.action-btn{flex:1;padding:12px;border-radius:12px;border:none;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit;transition:all .2s;}
+.action-btn.call{background:#F0FDF4;color:#16A34A;border:1.5px solid #86EFAC;}
+.action-btn.book{background:linear-gradient(135deg,#16A34A,#059669);color:#fff;box-shadow:0 4px 12px rgba(22,163,74,.3);}
+</style>
+</head>
+<body>
+
+<!-- 입력 화면 -->
+<div id="inputScreen" class="screen active">
+  <div class="header">
+    <span class="icon">⛳</span>
+    <h1>AI 골프장 찾기</h1>
+    <p>지역 검색 → 골프장 리스트 & 예약 정보</p>
+    <span class="ai-badge">✨ Gemini AI · 무료</span>
+  </div>
+  <div class="card">
+    <!-- 검색 타입 탭 -->
+    <div style="display:flex;background:#F1F5F9;border-radius:12px;padding:4px;margin-bottom:20px;gap:4px;">
+      <button id="tab-region" onclick="switchTab('region')"
+        style="flex:1;padding:10px;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;background:#fff;color:#16A34A;box-shadow:0 2px 6px rgba(0,0,0,.1);transition:all .2s;">
+        📍 지역 검색
+      </button>
+      <button id="tab-name" onclick="switchTab('name')"
+        style="flex:1;padding:10px;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;background:transparent;color:#94A3B8;transition:all .2s;">
+        🔍 골프장 검색
+      </button>
+    </div>
+
+    <!-- 지역 검색 -->
+    <div id="search-region">
+      <div class="field">
+        <label>📍 찾는 지역</label>
+        <input type="text" id="region" placeholder="예: 부산, 경기도 용인, 강원도 춘천...">
+        <div class="error-msg" id="regionError">지역 또는 골프장명을 입력해 주세요 📍</div>
+      </div>
+    </div>
+
+    <!-- 골프장명 검색 -->
+    <div id="search-name" style="display:none;">
+      <div class="field">
+        <label>🔍 골프장 이름</label>
+        <input type="text" id="golfName" placeholder="예: 해운대CC, 동래베네스트, 파인크리크...">
+      </div>
+    </div>
+    <div class="field">
+      <label>📅 라운딩 희망 날짜</label>
+      <input type="date" id="playDate">
+    </div>
+    <div class="field">
+      <label>⏰ 선호 티타임</label>
+      <div class="toggle-btns">
+        <button class="toggle-btn sel" data-t="상관없음">🤷 무관</button>
+        <button class="toggle-btn" data-t="오전(06~12시)">🌅 오전</button>
+        <button class="toggle-btn" data-t="오후(12~18시)">☀️ 오후</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>👥 인원</label>
+      <div class="counter-row">
+        <div class="counter-box">
+          <div class="clabel">플레이어 🏌️</div>
+          <div class="counter-ctrl">
+            <button class="cnt-btn" onclick="changeCount('players',-1)">−</button>
+            <span class="cnt-val" id="playersVal">4</span>
+            <button class="cnt-btn" onclick="changeCount('players',1)">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="field">
+      <label>📊 난이도</label>
+      <div class="toggle-btns">
+        <button class="toggle-btn sel" data-d="전체">전체</button>
+        <button class="toggle-btn" data-d="초급">🐣 초급</button>
+        <button class="toggle-btn" data-d="중급">🏌️ 중급</button>
+        <button class="toggle-btn" data-d="중상급">🔥 중상급</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>🏌️ 코스 타입</label>
+      <div class="toggle-btns">
+        <button class="toggle-btn sel" data-c="전체">전체</button>
+        <button class="toggle-btn" data-c="퍼블릭">퍼블릭</button>
+        <button class="toggle-btn" data-c="회원제">회원제</button>
+        <button class="toggle-btn" data-c="세미퍼블릭">세미</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>💰 1인 그린피 예산</label>
+      <div class="toggle-btns">
+        <button class="toggle-btn sel" data-b="제한없음">무제한</button>
+        <button class="toggle-btn" data-b="10만원 이하">~10만</button>
+        <button class="toggle-btn" data-b="10~20만원">10~20만</button>
+        <button class="toggle-btn" data-b="20~30만원">20~30만</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>📋 검색 개수</label>
+      <div class="toggle-btns">
+        <button class="toggle-btn sel" data-n="5">5개</button>
+        <button class="toggle-btn" data-n="10">10개</button>
+      </div>
+    </div>
+    <button class="cta-btn" onclick="handleGenerate()">⛳ 골프장 검색하기</button>
+
+    <!-- PLK 퍼시픽링스 바로가기 -->
+    <div style="margin-top:16px;background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:14px;padding:14px 16px;">
+      <div style="font-size:13px;font-weight:800;color:#15803D;margin-bottom:4px;">🏌️ PLK 퍼시픽링크스코리아</div>
+      <div style="font-size:12px;color:#64748B;margin-bottom:10px;">국내외 200여개 골프장 예약 멤버십</div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="window.open('https://mapp.pacificlinks.co.kr','_blank')"
+          style="flex:1;padding:10px;border-radius:10px;border:none;background:#16A34A;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🌐 모바일 예약
+        </button>
+        <button onclick="window.open('https://play.google.com/store/search?q=퍼시픽링스&c=apps','_blank')"
+          style="flex:1;padding:10px;border-radius:10px;border:none;background:#3B82F6;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🤖 안드로이드
+        </button>
+        <button onclick="window.open('https://apps.apple.com/kr/search?term=퍼시픽링스','_blank')"
+          style="flex:1;padding:10px;border-radius:10px;border:none;background:#1E293B;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
+          🍎 아이폰
+        </button>
+      </div>
+    </div>
+
+    <div style="text-align:center;margin-top:12px;">
+      <button onclick="showKeyModal()" style="background:none;border:none;color:#94A3B8;font-size:12px;cursor:pointer;font-family:inherit;">🔑 API 키 변경 (할당량 초과 시)</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- 로딩 화면 -->
+<div id="loadingScreen" class="screen">
+  <span class="load-icon">🏌️</span>
+  <div class="load-title" id="loadTitle">골프장을 검색하고 있어요</div>
+  <div class="load-sub">Gemini AI가 주변 골프장을 분석하는 중...</div>
+  <div class="load-steps">
+    <div class="load-step"><div class="step-dot" id="sd0"></div><span class="step-text" id="st0">📍 지역 골프장 목록 수집 중</span></div>
+    <div class="load-step"><div class="step-dot" id="sd1"></div><span class="step-text" id="st1">💰 그린피 & 카트피 확인 중</span></div>
+    <div class="load-step"><div class="step-dot" id="sd2"></div><span class="step-text" id="st2">📞 예약 방법 & 연락처 수집 중</span></div>
+    <div class="load-step"><div class="step-dot" id="sd3"></div><span class="step-text" id="st3">⭐ 코스 난이도 & 특징 분석 중</span></div>
+    <div class="load-step"><div class="step-dot" id="sd4"></div><span class="step-text" id="st4">✨ 추천 순위 정리 중</span></div>
+  </div>
+</div>
+
+<!-- 결과 화면 -->
+<div id="resultScreen" class="screen">
+  <div class="result-hero">
+    <div class="hero-top">
+      <div>
+        <div class="hero-badge">⛳ GEMINI AI 추천</div>
+        <div class="hero-title" id="heroTitle"></div>
+        <div class="hero-sub" id="heroSub"></div>
+      </div>
+      <button class="reset-btn" onclick="resetApp()">↩ 다시</button>
+    </div>
+    <div class="hero-tags" id="heroTags"></div>
+  </div>
+
+
+  <!-- 날씨 위젯 -->
+  <div id="weatherCard" style="display:none;margin:0;background:linear-gradient(135deg,#0369a1 0%,#0284c7 50%,#38bdf8 100%);padding:14px 14px 12px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div>
+        <div style="font-size:10px;color:rgba(255,255,255,.7);font-weight:600;letter-spacing:.5px;margin-bottom:2px;">📍 <span id="weatherLocation"></span></div>
+        <div style="font-size:14px;font-weight:900;color:#fff;">⛳ 라운딩 전후 날씨</div>
+      </div>
+      <div id="weatherTodayBig" style="text-align:right;"></div>
+    </div>
+    <div id="weatherContent" style="display:flex;gap:5px;"></div>
+    <div id="weatherRoundingAlert" style="margin-top:10px;display:none;"></div>
+  </div>
+
+  <div class="filter-bar" id="filterBar"></div>
+  <div class="result-count" id="resultCount"></div>
+  <div class="courses-list" id="coursesList"></div>
+</div>
+
+<script>
+const MODELS = ['gemini-2.0-flash','gemini-2.0-flash-lite','gemini-2.5-flash'];
+const GEMINI_KEY_DEFAULT = '';
+const KAKAO_KEY = '';
+const state = { players:4, teeTime:'상관없음', difficulty:'전체', courseType:'전체', budget:'제한없음', count:5, plan:null, activeFilter:'전체' };
+
+function getApiKey(){ return localStorage.getItem('gemini_golf_key') || GEMINI_KEY_DEFAULT; }
+function getKakaoKey(){ return localStorage.getItem('kakao_rest_key') || KAKAO_KEY; }
+
+function showKeyModal(){
+  const current = localStorage.getItem('gemini_golf_key') || '';
+  const key = prompt('🔑 Gemini API 키 입력\n(aistudio.google.com에서 무료 발급)\n\n현재 키가 할당량 초과 시 새 키를 입력하세요:', current);
+  if(key && key.trim()) {
+    localStorage.setItem('gemini_golf_key', key.trim());
+    alert('✅ 새 API 키가 저장됐어요!');
+  }
+}
+
+function switchTab(type){
+  state.searchTab = type;
+  const isName = type === 'name';
+  document.getElementById('search-region').style.display = isName ? 'none' : 'block';
+  document.getElementById('search-name').style.display = isName ? 'block' : 'none';
+  const tabRegion = document.getElementById('tab-region');
+  const tabName = document.getElementById('tab-name');
+  if(isName){
+    tabName.style.background='#fff'; tabName.style.color='#16A34A'; tabName.style.boxShadow='0 2px 6px rgba(0,0,0,.1)';
+    tabRegion.style.background='transparent'; tabRegion.style.color='#94A3B8'; tabRegion.style.boxShadow='none';
+  } else {
+    tabRegion.style.background='#fff'; tabRegion.style.color='#16A34A'; tabRegion.style.boxShadow='0 2px 6px rgba(0,0,0,.1)';
+    tabName.style.background='transparent'; tabName.style.color='#94A3B8'; tabName.style.boxShadow='none';
+  }
+}
+
+window.addEventListener('DOMContentLoaded', ()=>{
+  if(!getApiKey()) showKeyModal();
+  state.searchTab = 'region';
+  const today = new Date();
+  document.getElementById('playDate').value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+  document.querySelectorAll('.toggle-btn[data-t]').forEach(b=>{
+    b.addEventListener('click',()=>{ state.teeTime=b.dataset.t; document.querySelectorAll('.toggle-btn[data-t]').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); });
+  });
+  document.querySelectorAll('.toggle-btn[data-d]').forEach(b=>{
+    b.addEventListener('click',()=>{ state.difficulty=b.dataset.d; document.querySelectorAll('.toggle-btn[data-d]').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); });
+  });
+  document.querySelectorAll('.toggle-btn[data-c]').forEach(b=>{
+    b.addEventListener('click',()=>{ state.courseType=b.dataset.c; document.querySelectorAll('.toggle-btn[data-c]').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); });
+  });
+  document.querySelectorAll('.toggle-btn[data-b]').forEach(b=>{
+    b.addEventListener('click',()=>{ state.budget=b.dataset.b; document.querySelectorAll('.toggle-btn[data-b]').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); });
+  });
+  document.querySelectorAll('.toggle-btn[data-n]').forEach(b=>{
+    b.addEventListener('click',()=>{ state.count=parseInt(b.dataset.n); document.querySelectorAll('.toggle-btn[data-n]').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); });
+  });
+  document.getElementById('region').addEventListener('keydown', e=>{ if(e.key==='Enter') handleGenerate(); });
+  document.getElementById('golfName').addEventListener('keydown', e=>{ if(e.key==='Enter') handleGenerate(); });
+});
+
+function changeCount(key, delta){
+  const min=1, max=8;
+  state[key] = Math.min(max, Math.max(min, state[key]+delta));
+  document.getElementById(key+'Val').textContent = state[key];
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>{ s.classList.remove('active'); s.style.display=''; });
+  const el = document.getElementById(id);
+  el.classList.add('active');
+  if(id==='loadingScreen') el.style.display='flex';
+}
+
+let loadTimer=null;
+function startLoadAnim(region){
+  document.getElementById('loadTitle').textContent = region+' 골프장 검색 중...';
+  let tick=0;
+  loadTimer=setInterval(()=>{ tick++; for(let i=0;i<5;i++){ const on=i<=(tick%6); document.getElementById('sd'+i).classList.toggle('on',on); document.getElementById('st'+i).classList.toggle('on',on); } },600);
+}
+function stopLoadAnim(){ if(loadTimer){ clearInterval(loadTimer); loadTimer=null; } }
+
+async function callGemini(prompt, apiKey, modelIdx=0, retries=2){
+  const model=MODELS[modelIdx]||MODELS[0];
+  for(let i=0;i<=retries;i++){
+    try{
+      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,{
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          contents:[{parts:[{text:prompt}]}],
+          generationConfig:{temperature:0.2,maxOutputTokens:16000}
+        })
+      });
+      const data=await res.json();
+      if(data.error){
+        const msg=data.error.message||'';
+        if((msg.includes('high demand')||msg.includes('overloaded')||msg.includes('quota'))&&modelIdx+1<MODELS.length) return callGemini(prompt,apiKey,modelIdx+1,retries);
+        if(i<retries){ await new Promise(r=>setTimeout(r,2000*(i+1))); continue; }
+        throw new Error(msg);
+      }
+      return data;
+    }catch(e){ if(i<retries){ await new Promise(r=>setTimeout(r,2000*(i+1))); continue; } throw e; }
+  }
+}
+
+async function handleGenerate(){
+  const errEl=document.getElementById('regionError');
+  const searchType = state.searchTab || 'region';
+  const region = document.getElementById('region').value.trim();
+  const golfName = document.getElementById('golfName').value.trim();
+  const query = searchType === 'name' ? golfName : region;
+
+  if(!query){ errEl.textContent='지역 또는 골프장명을 입력해 주세요 📍'; errEl.style.display='block'; return; }
+  errEl.style.display='none';
+  const apiKey=getApiKey();
+  if(!apiKey){ return; }
+
+  const dateVal=document.getElementById('playDate').value;
+  const dateStr=dateVal?new Date(dateVal).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'}):'미정';
+
+  showScreen('loadingScreen');
+  startLoadAnim(query);
+
+  let prompt;
+  if(searchType === 'name'){
+    prompt=`한국 골프장 전문가. "${golfName}" 골프장 정보를 JSON으로만 반환. 마크다운 없이 순수 JSON만.
+날짜=${dateStr}, 인원=${state.players}명
+{"region":"${golfName}","searchDate":"${dateStr}","summary":"한줄요약","tags":["태그1","태그2","태그3"],"courses":[{"rank":1,"name":"정식명칭","type":"퍼블릭|회원제|세미퍼블릭","address":"주소","distanceFromCenter":"차로N분","holes":"18홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1","특징2"],"greenFee":{"weekday":"12만원","weekend":"18만원","weekdayNum":120000,"weekendNum":180000,"cartFee":"팀당8만원","caddyFee":"팀당13만원"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"홈페이지","phone":"051-000-0000","advanceBooking":"2주전","availability":"가능성높음","tip":"꿀팁"},"facilities":["시설1"],"restaurants":[{"name":"식당명","category":"한식","menu":"대표메뉴","distance":"차로5분","naverSearch":"식당명 지역명"}],"recommended":true,"recommendReason":"추천이유"}]}
+규칙: 관련 골프장 1~3개, weekdayNum·weekendNum 숫자(원), 맛집 3개, 완전한 JSON만.`;
+  } else {
+    prompt=`한국 골프장 전문가. 아래 조건 골프장을 JSON으로만 반환. 마크다운 없이 순수 JSON만.
+지역=${region}, 날짜=${dateStr}, 티타임=${state.teeTime}, 인원=${state.players}명, 난이도=${state.difficulty}, 타입=${state.courseType}, 예산=${state.budget}
+{"region":"${region}","searchDate":"${dateStr}","summary":"한줄요약","tags":["태그1","태그2","태그3"],"courses":[{"rank":1,"name":"정식명칭","type":"퍼블릭|회원제|세미퍼블릭","address":"주소","distanceFromCenter":"차로N분","holes":"18홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1","특징2"],"greenFee":{"weekday":"12만원","weekend":"18만원","weekdayNum":120000,"weekendNum":180000,"cartFee":"팀당8만원","caddyFee":"팀당13만원"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"홈페이지","phone":"051-000-0000","advanceBooking":"2주전","availability":"가능성높음","tip":"꿀팁"},"facilities":["시설1"],"restaurants":[{"name":"식당명","category":"한식","menu":"대표메뉴","distance":"차로5분","naverSearch":"식당명 지역명"}],"recommended":true,"recommendReason":"추천이유"}]}
+규칙: 실제 ${region} 골프장 ${state.count}개, rank1=recommended:true, 전화번호 모르면 빈문자열, weekdayNum·weekendNum 숫자(원), 맛집 각 3개, 완전한 JSON만.`;
+  }
+
+  try{
+    const data=await callGemini(prompt,apiKey);
+    let text=data.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    text=text.replace(/\`\`\`json\n?|\`\`\`\n?/g,'').trim();
+    if(!text.endsWith('}')){ const lb=text.lastIndexOf('}'); if(lb>0) text=text.substring(0,lb+1); }
+    const plan=JSON.parse(text);
+    stopLoadAnim();
+    state.plan=plan;
+    state.activeFilter='전체';
+    renderResult();
+    showScreen('resultScreen');
+    document.getElementById('adSlot').style.display='block';
+    window.scrollTo(0,0);
+  }catch(e){
+    stopLoadAnim();
+    showScreen('inputScreen');
+    const errEl2=document.getElementById('regionError');
+    errEl2.textContent='오류: '+(e.message||'검색 실패. API 키를 확인하거나 다시 시도해 주세요.');
+    errEl2.style.display='block';
+  }
+}
+
+function renderResult(){
+  const plan=state.plan;
+  document.getElementById('heroTitle').textContent=plan.region+' 골프장 '+plan.courses.length+'곳';
+  document.getElementById('heroSub').textContent=plan.searchDate+' · '+plan.summary;
+  document.getElementById('heroTags').innerHTML=(plan.tags||[]).map(t=>`<span class="hero-tag">🏷 ${t}</span>`).join('');
+
+  // 날씨 로드
+  const query = state.searchTab==='name'
+    ? (document.getElementById('golfName').value.trim())
+    : (document.getElementById('region').value.trim());
+  fetchWeather(query, document.getElementById('playDate').value);
+
+  // 필터
+  const types=['전체',...new Set(plan.courses.map(c=>c.type))];
+  document.getElementById('filterBar').innerHTML=types.map(t=>
+    `<button class="filter-chip${t==='전체'?' on':''}" onclick="applyFilter('${t}')">${t}</button>`
+  ).join('');
+
+  renderCourses();
+}
+
+// 날씨 위젯 (Open-Meteo 무료 API) - 지정일 전후 7일
+async function fetchWeather(regionName, dateVal){
+  const card = document.getElementById('weatherCard');
+  card.style.display='none';
+  try {
+    const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(regionName)}&count=1&language=ko`);
+    const geoData = await geoRes.json();
+    const loc = geoData.results?.[0];
+    if(!loc) return;
+    const {latitude:lat, longitude:lon, name:locName} = loc;
+    document.getElementById('weatherLocation').textContent = locName + ' 날씨';
+
+    // 지정일 기준 전후 3일씩 = 7일 표시, 전체 14일 요청
+    const wRes = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=Asia%2FSeoul&forecast_days=14`
+    );
+    const wData = await wRes.json();
+    const d = wData.daily;
+    if(!d) return;
+
+    const wmoInfo = c => {
+      if(c===0)  return {i:'☀️', t:'맑음',    golf:'최상'};
+      if(c<=2)   return {i:'🌤️', t:'구름조금', golf:'좋음'};
+      if(c<=3)   return {i:'☁️', t:'흐림',    golf:'보통'};
+      if(c<=49)  return {i:'🌫️', t:'안개',    golf:'주의'};
+      if(c<=69)  return {i:'🌧️', t:'비',      golf:'나쁨'};
+      if(c<=79)  return {i:'❄️', t:'눈',      golf:'나쁨'};
+      if(c<=84)  return {i:'🌦️', t:'소나기',  golf:'주의'};
+      return       {i:'⛈️', t:'뇌우',   golf:'불가'};
+    };
+
+    const dayNames=['일','월','화','수','목','금','토'];
+    const today = new Date().toISOString().slice(0,10);
+    const targetDate = dateVal || today;
+
+    // 지정일 인덱스 찾기
+    const targetIdx = d.time.indexOf(targetDate);
+    const centerIdx = targetIdx >= 0 ? targetIdx : 0;
+
+    // 전후 3일씩 (총 7일) 슬라이싱
+    const startIdx = Math.max(0, centerIdx - 3);
+    const endIdx = Math.min(d.time.length - 1, centerIdx + 3);
+    const slicedTimes = d.time.slice(startIdx, endIdx + 1);
+
+    // 오늘 날씨 크게
+    const todayLocalIdx = d.time.indexOf(today);
+    const todayW = wmoInfo(d.weathercode[todayLocalIdx >= 0 ? todayLocalIdx : 0]);
+    document.getElementById('weatherTodayBig').innerHTML=`
+      <div style="font-size:32px;line-height:1;">${todayW.i}</div>
+      <div style="color:#fff;font-size:18px;font-weight:900;">${Math.round(d.temperature_2m_max[todayLocalIdx>=0?todayLocalIdx:0])}°</div>
+      <div style="color:rgba(255,255,255,.7);font-size:11px;">${todayW.t}</div>
+    `;
+
+    document.getElementById('weatherContent').innerHTML = slicedTimes.map((date, si)=>{
+      const i = startIdx + si;
+      const w = wmoInfo(d.weathercode[i]);
+      const isTarget = date === targetDate;
+      const isToday = date === today;
+      const dt = new Date(date+'T00:00:00');
+      const label = isToday ? '오늘' : isTarget ? '라운딩' : `${dt.getMonth()+1}/${dt.getDate()}`;
+      const dayLabel = dayNames[dt.getDay()];
+      return `
+        <div style="border-radius:10px;padding:6px 3px;text-align:center;
+          background:${isTarget?'rgba(255,255,255,.95)':isToday?'rgba(255,255,255,.2)':'rgba(255,255,255,.1)'};
+          border:${isTarget?'2px solid #FCD34D':'1.5px solid rgba(255,255,255,.15)'};
+          transform:${isTarget?'scale(1.06)':'scale(1)'};flex:1;">
+          <div style="font-size:9px;font-weight:800;color:${isTarget?'#16A34A':isToday?'#fff':'rgba(255,255,255,.8)'};margin-bottom:1px;">${label}</div>
+          <div style="font-size:9px;color:${isTarget?'#64748B':'rgba(255,255,255,.55)'};">${dayLabel}</div>
+          <div style="font-size:18px;margin:3px 0;">${w.i}</div>
+          <div style="font-size:11px;font-weight:900;color:${isTarget?'#1E293B':'#fff'};">${Math.round(d.temperature_2m_max[i])}°</div>
+          <div style="font-size:9px;color:${isTarget?'#64748B':'rgba(255,255,255,.55)'};">${Math.round(d.temperature_2m_min[i])}°</div>
+          ${d.precipitation_sum[i]>0
+            ?`<div style="font-size:8px;color:${isTarget?'#3B82F6':'#93c5fd'};margin-top:2px;">💧${d.precipitation_sum[i]}mm</div>`
+            :`<div style="font-size:8px;color:${isTarget?'#16A34A':'rgba(255,255,255,.4)'};margin-top:2px;">${w.golf}</div>`}
+        </div>`;
+    }).join('');
+
+    // 라운딩 날 알림
+    const alertEl = document.getElementById('weatherRoundingAlert');
+    if(targetIdx>=0){
+      const tw = wmoInfo(d.weathercode[targetIdx]);
+      const rain = d.precipitation_sum[targetIdx];
+      const wind = Math.round(d.windspeed_10m_max[targetIdx]);
+      const alertColor = tw.golf==='나쁨'||tw.golf==='불가'?'#FEE2E2':tw.golf==='주의'?'#FEF9C3':'#F0FDF4';
+      const alertTextColor = tw.golf==='나쁨'||tw.golf==='불가'?'#DC2626':tw.golf==='주의'?'#D97706':'#16A34A';
+      alertEl.innerHTML=`
+        <div style="background:${alertColor};border-radius:10px;padding:9px 12px;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:20px;">${tw.i}</span>
+          <div>
+            <div style="font-size:12px;font-weight:800;color:${alertTextColor};">라운딩 당일 · 골프 날씨 ${tw.golf}</div>
+            <div style="font-size:11px;color:#64748B;margin-top:1px;">최고 ${Math.round(d.temperature_2m_max[targetIdx])}° / 최저 ${Math.round(d.temperature_2m_min[targetIdx])}° · ${rain>0?`강수 ${rain}mm`:'강수 없음'} · 바람 ${wind}km/h</div>
+          </div>
+        </div>`;
+      alertEl.style.display='block';
+    } else { alertEl.style.display='none'; }
+
+    card.style.display='block';
+  } catch(e){ console.log('날씨 오류',e); }
+}
+
+function applyFilter(type){
+  state.activeFilter=type;
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.toggle('on',c.textContent.trim()===type));
+  renderCourses();
+}
+
+function renderCourses(){
+  let courses=state.activeFilter==='전체'?state.plan.courses:state.plan.courses.filter(c=>c.type===state.activeFilter);
+
+  // 그린피 저렴한 순 정렬 (weekendNum 기준, 없으면 weekdayNum, 없으면 맨 뒤)
+  courses = [...courses].sort((a,b)=>{
+    const aFee = a.greenFee?.weekendNum || a.greenFee?.weekdayNum || 999999999;
+    const bFee = b.greenFee?.weekendNum || b.greenFee?.weekdayNum || 999999999;
+    return aFee - bFee;
+  });
+
+  document.getElementById('resultCount').innerHTML=`총 <span>${courses.length}개</span> 골프장 · 💰 그린피 낮은 순`;
+
+  document.getElementById('coursesList').innerHTML=courses.map((c,i)=>`
+    <div class="course-card${c.recommended?' recommended':''}" id="card-${i}">
+      <div class="card-header">
+        <div class="card-rank${c.rank===1?' gold':''}">${c.rank}</div>
+        ${c.recommended?`<span class="recommended-badge">⭐ 강력 추천</span>`:''}
+      </div>
+      <div class="card-name">${c.name}</div>
+      <div class="card-addr">📍 ${c.address} · ${c.distanceFromCenter}</div>
+
+      <div class="card-chips">
+        <span class="chip chip-type">${c.type}</span>
+        <span class="chip chip-hole">${c.holes} · Par${c.par}</span>
+        <span class="chip chip-diff">${c.difficulty}</span>
+        ${c.greenFee?.caddyFee?.includes('셀프')?`<span class="chip chip-caddie">셀프 가능</span>`:''}
+      </div>
+
+      <div class="fee-row">
+        <div class="fee-title">💰 그린피 & 요금</div>
+        <div class="fee-grid">
+          <div class="fee-item"><div class="fee-label">주중</div><div class="fee-price">${c.greenFee?.weekday||'-'}</div></div>
+          <div class="fee-item"><div class="fee-label">주말</div><div class="fee-price highlight">${c.greenFee?.weekend||'-'}</div></div>
+          <div class="fee-item"><div class="fee-label">카트피</div><div class="fee-price">${c.greenFee?.cartFee||'-'}</div></div>
+          <div class="fee-item"><div class="fee-label">캐디피</div><div class="fee-price">${c.greenFee?.caddyFee||'-'}</div></div>
+        </div>
+      </div>
+
+      ${c.totalEstimate?`<div style="padding:0 16px 12px;font-size:13px;color:#16A34A;font-weight:700;">👥 ${state.players}명 총 예상: ${c.totalEstimate}</div>`:''}
+
+      <div class="booking-section">
+        <div class="booking-title">📋 예약 정보</div>
+        <div class="booking-row"><span class="b-label">예약 방법</span><span class="b-value">${c.reservation?.method||'-'}</span></div>
+        <div class="booking-row"><span class="b-label">예약 가능 시점</span><span class="b-value">${c.reservation?.advanceBooking||'-'}</span></div>
+        <div class="booking-row"><span class="b-label">해당 날짜 예약</span><span class="b-value ${c.reservation?.availability?.includes('높음')?'green':'red'}">${c.reservation?.availability||'-'}</span></div>
+      </div>
+
+      ${c.reservation?.tip?`<div class="tip-box">💡 ${c.reservation.tip}</div>`:''}
+      ${c.features?.length?`<div style="padding:0 16px 14px;font-size:12px;color:#64748B;">🏌️ ${c.features.join(' · ')}</div>`:''}
+      ${c.facilities?.length?`<div style="padding:0 16px 14px;font-size:12px;color:#64748B;">🏢 ${c.facilities.join(' · ')}</div>`:''}
+
+      ${c.restaurants?.length ? `
+      <div style="border-top:1px solid #F1F5F9;padding:14px 16px 4px;">
+        <div style="font-size:13px;font-weight:800;color:#374151;margin-bottom:10px;">🍽️ 근처 추천 맛집</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${c.restaurants.map(r=>`
+            <div style="background:#FFF7ED;border-radius:12px;padding:11px 13px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+                  <span style="font-size:14px;font-weight:800;color:#1E293B;">${r.name}</span>
+                  <span style="font-size:10px;background:#FED7AA;color:#C2410C;border-radius:6px;padding:2px 6px;font-weight:700;flex-shrink:0;">${r.category}</span>
+                </div>
+                <div style="font-size:12px;color:#64748B;">🍴 ${r.menu} · 🚗 ${r.distance}</div>
+              </div>
+              <button onclick="openReview('${(r.naverSearch||r.name).replace(/'/g,'').replace(/"/g,'')}')"
+                style="flex-shrink:0;padding:7px 11px;border-radius:8px;border:none;background:#03C75A;color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;">
+                📝 리뷰 보기
+              </button>
+            </div>
+          `).join('')}
+        </div>
+      </div>` : ''}
+
+      <div style="padding:12px 16px 16px;display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:8px;">
+          <button id="tel-btn-${i}" class="action-btn call" style="flex:1;padding:12px;border-radius:12px;"
+            onclick="${c.reservation?.phone
+              ? `window.open('tel:${c.reservation.phone}')`
+              : `window.open('https://m.map.kakao.com/actions/searchView?q=${encodeURIComponent(c.name+' 골프장')}','_blank')`}">
+            📞 ${c.reservation?.phone||'전화번호 찾기'}
+          </button>
+          <button class="action-btn book" style="flex:1;padding:12px;border-radius:12px;border:none;background:#FEE500;color:#3A1D1D;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;"
+            onclick="window.open('https://m.map.kakao.com/actions/searchView?q=${encodeURIComponent(c.name+' 골프장')}','_blank')">
+            🗺️ 카카오맵
+          </button>
+        </div>
+        <button style="width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,#16A34A,#059669);color:#fff;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;"
+          onclick="window.open('https://www.google.com/search?q=${encodeURIComponent(c.name)}+골프장+site:co.kr+OR+site:com+OR+site:kr+-blog.naver.com+-tistory.com+-cafe.naver.com','_blank')">
+          🏠 공식 홈페이지 검색
+        </button>
+      </div>
+    </div>
+  `).join('');
+
+  // 카카오 API로 전화번호 보정 (키 있을 때만)
+  if(getKakaoKey()) courses.forEach((c,i) => loadKakaoPhone(c,i));
+}
+
+// 카카오 API로 전화번호만 보정
+async function loadKakaoPhone(c, i){
+  const kakaoKey = getKakaoKey();
+  if(!kakaoKey) return;
+  try {
+    const res = await fetch(
+      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(c.name+' 골프장')}&size=3`,
+      { headers:{ 'Authorization':'KakaoAK '+kakaoKey } }
+    );
+    const data = await res.json();
+    if(data.errorType) return;
+    const docs = data.documents||[];
+    const place = docs.find(d=>
+      d.place_name.replace(/\s/g,'').includes(c.name.replace(/\s/g,'').substring(0,3))
+    ) || docs[0];
+    if(place?.phone){
+      const telBtn = document.getElementById('tel-btn-'+i);
+      if(telBtn){
+        telBtn.textContent = '📞 '+place.phone;
+        telBtn.onclick = ()=>window.open('tel:'+place.phone);
+      }
+    }
+  } catch(e){}
+}
+
+function openReview(name){
+  window.open('https://m.search.naver.com/search.naver?query='+encodeURIComponent(name)+'&where=m_place','_blank');
+}
+
+function resetApp(){ state.plan=null; showScreen('inputScreen'); window.scrollTo(0,0); }
+</script>
+<!-- 앱 설치 배너 -->
+<div id="installBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:888;background:#fff;border-top:1px solid #E2E8F0;padding:14px 16px;box-shadow:0 -4px 20px rgba(0,0,0,.12);">
+  <div style="display:flex;align-items:center;gap:12px;max-width:460px;margin:0 auto;">
+    <img src="icon-192.png" style="width:44px;height:44px;border-radius:10px;">
+    <div style="flex:1;">
+      <div style="font-size:14px;font-weight:800;color:#1E293B;">AI 골프장 찾기</div>
+      <div style="font-size:12px;color:#64748B;">홈화면에 추가하면 앱처럼 사용!</div>
+    </div>
+    <button id="installBtn" style="padding:9px 16px;background:#16A34A;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">설치</button>
+    <button onclick="document.getElementById('installBanner').style.display='none'" style="background:none;border:none;font-size:20px;color:#94A3B8;cursor:pointer;padding:0 4px;">✕</button>
+  </div>
+</div>
+
+<!-- 광고 슬롯 (결과화면 하단) -->
+<div id="adSlot" style="display:none;padding:12px 16px;background:#F8FAFC;">
+  <!-- AdSense 코드 여기 삽입
+  <ins class="adsbygoogle"
+    style="display:block"
+    data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+    data-ad-slot="XXXXXXXXXX"
+    data-ad-format="auto"
+    data-full-width-responsive="true"></ins>
+  <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  -->
+  <div style="background:#E2E8F0;border-radius:8px;padding:20px;text-align:center;color:#94A3B8;font-size:12px;">광고 영역</div>
+</div>
+
+<script>
+// 서비스 워커 등록
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  });
+}
+
+// 앱 설치 프롬프트
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBanner').style.display='block';
+});
+document.getElementById('installBtn')?.addEventListener('click', async ()=>{
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const {outcome} = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('installBanner').style.display='none';
+});
+window.addEventListener('appinstalled', ()=>{
+  document.getElementById('installBanner').style.display='none';
+});
+</script>
+</body>
+</html>
