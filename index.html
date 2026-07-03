@@ -28,6 +28,14 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
 .screen{display:none;min-height:100vh;}
 .screen.active{display:block;}
 
+/* 드롭다운 아이템 */
+.dd-item{padding:12px 14px;cursor:pointer;border-bottom:1px solid #F1F5F9;display:flex;flex-direction:column;gap:2px;}
+.dd-item:last-child{border-bottom:none;}
+.dd-item:active{background:#F0FDF4;}
+.dd-name{font-size:14px;font-weight:700;color:#1E293B;}
+.dd-addr{font-size:12px;color:#94A3B8;}
+.dd-loading{padding:14px;text-align:center;color:#94A3B8;font-size:13px;}
+
 /* ── API 키 모달 ── */
 .modal-box{background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.2);}
 .modal-box h2{font-size:18px;font-weight:800;color:#1E293B;margin-bottom:6px;}
@@ -187,7 +195,13 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
     <div id="search-name" style="display:none;">
       <div class="field">
         <label>🔍 골프장 이름</label>
-        <input type="text" id="golfName" placeholder="예: 해운대CC, 동래베네스트, 파인크리크...">
+        <div style="position:relative;">
+          <input type="text" id="golfName" placeholder="예: 보라, 해운대, 동래..." autocomplete="off"
+            oninput="onGolfNameInput(this.value)"
+            onkeydown="if(event.key==='Enter'&&!document.getElementById('golfDropdown').children.length){handleGenerate();}">
+          <!-- 드롭다운 -->
+          <div id="golfDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #16A34A;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:100;max-height:260px;overflow-y:auto;margin-top:4px;"></div>
+        </div>
       </div>
     </div>
     <div class="field">
@@ -497,17 +511,25 @@ function renderResult(){
   document.getElementById('heroSub').textContent=plan.searchDate+' · '+plan.summary;
   document.getElementById('heroTags').innerHTML=(plan.tags||[]).map(t=>`<span class="hero-tag">🏷 ${t}</span>`).join('');
 
-  // 날씨 - 첫 번째 골프장 주소에서 도시명 추출 (더 정확)
+  // 날씨 - 카카오에서 선택한 경우 좌표 직접 사용, 아니면 주소 지오코딩
   const firstAddr = plan.courses?.[0]?.address || '';
-  // 주소에서 시/군/구 순서로 추출 (예: "울산광역시 울주군" → "울주군")
   const cityMatch = firstAddr.match(/([가-힣]+(특별시|광역시|특별자치시|도)\s*)?([가-힣]+(시|군|구))/);
   const rawQuery = state.searchTab==='name'
     ? (document.getElementById('golfName').value.trim())
     : (document.getElementById('region').value.trim());
-  // 주소에서 추출한 도시 우선, 없으면 입력 지역명 사용
   const weatherQuery = cityMatch ? (cityMatch[3] || cityMatch[0]) : rawQuery;
-  console.log('날씨 검색어:', weatherQuery, '| 원본 주소:', firstAddr);
-  fetchWeather(weatherQuery, document.getElementById('playDate').value);
+
+  // 카카오 선택된 장소의 좌표가 있으면 바로 사용
+  if(selectedPlace && selectedPlace.y && selectedPlace.x){
+    fetchWeatherByCoords(
+      parseFloat(selectedPlace.y),
+      parseFloat(selectedPlace.x),
+      selectedPlace.place_name,
+      document.getElementById('playDate').value
+    );
+  } else {
+    fetchWeather(weatherQuery, document.getElementById('playDate').value);
+  }
 
   // 필터
   const types=['전체',...new Set(plan.courses.map(c=>c.type))];
@@ -516,6 +538,21 @@ function renderResult(){
   ).join('');
 
   renderCourses();
+}
+
+// 좌표로 바로 날씨 조회 (카카오 선택 시)
+async function fetchWeatherByCoords(lat, lon, placeName, dateVal){
+  const card = document.getElementById('weatherCard');
+  card.style.display='none';
+  try {
+    document.getElementById('weatherLocation').textContent = `📍 ${placeName}`;
+    const wRes = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=Asia%2FSeoul&forecast_days=14`
+    );
+    const wData = await wRes.json();
+    renderWeather(wData.daily, dateVal);
+    card.style.display='block';
+  } catch(e){ console.log('날씨 오류',e); }
 }
 
 // 날씨 위젯 (Open-Meteo 무료 API) - 지정일 전후 7일
@@ -540,9 +577,13 @@ async function fetchWeather(regionName, dateVal){
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=Asia%2FSeoul&forecast_days=14`
     );
     const wData = await wRes.json();
-    const d = wData.daily;
-    if(!d) return;
+    renderWeather(wData.daily, dateVal);
+    card.style.display='block';
+  } catch(e){ console.log('날씨 오류',e); }
+}
 
+function renderWeather(d, dateVal){
+  if(!d) return;
     const wmoInfo = c => {
       if(c===0)  return {i:'☀️', t:'맑음',    golf:'최상'};
       if(c<=2)   return {i:'🌤️', t:'구름조금', golf:'좋음'};
@@ -553,21 +594,14 @@ async function fetchWeather(regionName, dateVal){
       if(c<=84)  return {i:'🌦️', t:'소나기',  golf:'주의'};
       return       {i:'⛈️', t:'뇌우',   golf:'불가'};
     };
-
     const dayNames=['일','월','화','수','목','금','토'];
     const today = new Date().toISOString().slice(0,10);
     const targetDate = dateVal || today;
-
-    // 지정일 인덱스 찾기
     const targetIdx = d.time.indexOf(targetDate);
     const centerIdx = targetIdx >= 0 ? targetIdx : 0;
-
-    // 전후 3일씩 (총 7일) 슬라이싱
     const startIdx = Math.max(0, centerIdx - 3);
     const endIdx = Math.min(d.time.length - 1, centerIdx + 3);
     const slicedTimes = d.time.slice(startIdx, endIdx + 1);
-
-    // 오늘 날씨 크게
     const todayLocalIdx = d.time.indexOf(today);
     const todayW = wmoInfo(d.weathercode[todayLocalIdx >= 0 ? todayLocalIdx : 0]);
     document.getElementById('weatherTodayBig').innerHTML=`
@@ -575,7 +609,6 @@ async function fetchWeather(regionName, dateVal){
       <div style="color:#fff;font-size:18px;font-weight:900;">${Math.round(d.temperature_2m_max[todayLocalIdx>=0?todayLocalIdx:0])}°</div>
       <div style="color:rgba(255,255,255,.7);font-size:11px;">${todayW.t}</div>
     `;
-
     document.getElementById('weatherContent').innerHTML = slicedTimes.map((date, si)=>{
       const i = startIdx + si;
       const w = wmoInfo(d.weathercode[i]);
@@ -599,8 +632,6 @@ async function fetchWeather(regionName, dateVal){
             :`<div style="font-size:8px;color:${isTarget?'#16A34A':'rgba(255,255,255,.4)'};margin-top:2px;">${w.golf}</div>`}
         </div>`;
     }).join('');
-
-    // 라운딩 날 알림
     const alertEl = document.getElementById('weatherRoundingAlert');
     if(targetIdx>=0){
       const tw = wmoInfo(d.weathercode[targetIdx]);
@@ -618,9 +649,6 @@ async function fetchWeather(regionName, dateVal){
         </div>`;
       alertEl.style.display='block';
     } else { alertEl.style.display='none'; }
-
-    card.style.display='block';
-  } catch(e){ console.log('날씨 오류',e); }
 }
 
 function applyFilter(type){
@@ -752,11 +780,71 @@ async function loadKakaoPhone(c, i){
   } catch(e){}
 }
 
+// ── 골프장명 자동완성 (카카오 로컬 API) ──
+let ddTimer = null;
+let selectedPlace = null; // 선택된 골프장 카카오 정보
+
+function onGolfNameInput(val){
+  selectedPlace = null;
+  const dd = document.getElementById('golfDropdown');
+  if(!val || val.length < 1){ dd.style.display='none'; return; }
+  clearTimeout(ddTimer);
+  ddTimer = setTimeout(()=> fetchGolfSuggest(val), 300);
+}
+
+async function fetchGolfSuggest(keyword){
+  const dd = document.getElementById('golfDropdown');
+  dd.innerHTML = '<div class="dd-loading">🔍 검색 중...</div>';
+  dd.style.display = 'block';
+  try {
+    const res = await fetch(
+      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(keyword+'골프장')}&size=15&category_group_code=SW8`,
+      { headers:{ 'Authorization':'KakaoAK '+KAKAO_KEY } }
+    );
+    const data = await res.json();
+    const docs = data.documents || [];
+    if(!docs.length){
+      dd.innerHTML = '<div class="dd-loading">검색 결과 없음</div>';
+      return;
+    }
+    dd.innerHTML = docs.map((p,i) => `
+      <div class="dd-item" onclick="selectPlace(${i})">
+        <span class="dd-name">${p.place_name}</span>
+        <span class="dd-addr">${p.address_name}</span>
+      </div>`).join('');
+    // 전역 저장
+    window._ddPlaces = docs;
+  } catch(e){
+    dd.innerHTML = '<div class="dd-loading">검색 오류</div>';
+  }
+}
+
+function selectPlace(idx){
+  const place = window._ddPlaces[idx];
+  if(!place) return;
+  selectedPlace = place;
+  document.getElementById('golfName').value = place.place_name;
+  document.getElementById('golfDropdown').style.display = 'none';
+  // 선택 즉시 검색
+  handleGenerate();
+}
+
+// 드롭다운 외부 클릭 시 닫기
+document.addEventListener('click', e=>{
+  if(!e.target.closest('#search-name')) document.getElementById('golfDropdown').style.display='none';
+});
+
 function openReview(name){
   window.open('https://m.search.naver.com/search.naver?query='+encodeURIComponent(name)+'&where=m_place','_blank');
 }
 
-function resetApp(){ state.plan=null; showScreen('inputScreen'); window.scrollTo(0,0); }
+function resetApp(){
+  state.plan=null;
+  selectedPlace=null;
+  document.getElementById('golfDropdown').style.display='none';
+  showScreen('inputScreen');
+  window.scrollTo(0,0);
+}
 </script>
 <!-- 앱 설치 배너 -->
 <div id="installBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:888;background:#fff;border-top:1px solid #E2E8F0;padding:14px 16px;box-shadow:0 -4px 20px rgba(0,0,0,.12);">
