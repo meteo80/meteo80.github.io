@@ -481,10 +481,12 @@ JSON만 반환, 마크다운 없음:
 {"region":"전국","searchDate":"${dateStr}","summary":"'${golfName}' 포함 전국 골프장","tags":["전국검색","${golfName}","키워드검색"],"courses":[{"rank":1,"name":"정식명칭","type":"퍼블릭|회원제|세미퍼블릭","address":"도로명주소","distanceFromCenter":"지역중심에서 차로N분","holes":"18홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1","특징2"],"greenFee":{"weekday":"12만원","weekend":"18만원","weekdayNum":120000,"weekendNum":180000,"cartFee":"팀당8만원","caddyFee":"팀당13만원"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"홈페이지","phone":"052-000-0000","advanceBooking":"2주전","availability":"가능성높음","tip":"꿀팁"},"facilities":["시설1"],"restaurants":[{"name":"식당명","category":"한식","menu":"대표메뉴","distance":"차로5분","naverSearch":"식당명 지역명"}],"recommended":true,"recommendReason":"추천이유"}]}
 완전한 JSON만 출력.`;
   } else {
+    const targetHint = state.targetGolfName ? `\n특히 "${state.targetGolfName}"을 rank1로 반드시 포함.` : '';
+    state.targetGolfName = null;
     prompt=`한국 골프장 전문가. 아래 조건 골프장을 JSON으로만 반환. 마크다운 없이 순수 JSON만.
-지역=${region}, 날짜=${dateStr}, 티타임=${state.teeTime}, 인원=${state.players}명, 난이도=${state.difficulty}, 타입=${state.courseType}, 예산=${state.budget}
+지역=${region}, 날짜=${dateStr}, 티타임=${state.teeTime}, 인원=${state.players}명, 난이도=${state.difficulty}, 타입=${state.courseType}, 예산=${state.budget}${targetHint}
 {"region":"${region}","searchDate":"${dateStr}","summary":"한줄요약","tags":["태그1","태그2","태그3"],"courses":[{"rank":1,"name":"정식명칭","type":"퍼블릭|회원제|세미퍼블릭","address":"주소","distanceFromCenter":"차로N분","holes":"18홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1","특징2"],"greenFee":{"weekday":"12만원","weekend":"18만원","weekdayNum":120000,"weekendNum":180000,"cartFee":"팀당8만원","caddyFee":"팀당13만원"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"홈페이지","phone":"051-000-0000","advanceBooking":"2주전","availability":"가능성높음","tip":"꿀팁"},"facilities":["시설1"],"restaurants":[{"name":"식당명","category":"한식","menu":"대표메뉴","distance":"차로5분","naverSearch":"식당명 지역명"}],"recommended":true,"recommendReason":"추천이유"}]}
-규칙: 실제 ${region} 골프장 ${state.count}개, rank1=recommended:true, 전화번호 모르면 빈문자열, weekdayNum·weekendNum 숫자(원), 맛집 각 3개, 완전한 JSON만.`;
+규칙: 실제 ${region} 골프장 ${state.count}개, rank1=recommended:true, 전화번호 모르면 빈문자열, weekdayNum·weekendNum 숫자(원), 맛집 각 2개, 완전한 JSON만.`;
   }
 
   try{
@@ -909,10 +911,21 @@ function selectPlace(idx){
   const place = window._ddPlaces?.[idx];
   if(!place){ _selecting=false; return; }
   selectedPlace = {place_name:place.place_name, address_name:place.address_name};
-  // 골프장 검색 탭으로 명시적 전환
-  state.searchTab = 'name';
+
+  // 주소에서 지역 추출 (예: "부산 기장군 정관읍" → "부산 기장군")
+  const addrParts = place.address_name.split(' ');
+  const regionFromAddr = addrParts.slice(0,2).join(' '); // 시+군/구
+
+  // 지역 검색 탭으로 전환하고 지역명 입력
+  state.searchTab = 'region';
+  switchTab('region');
+  document.getElementById('region').value = regionFromAddr;
   document.getElementById('golfName').value = place.place_name;
   document.getElementById('golfDropdown').style.display='none';
+
+  // 검색 제목에 골프장명 표시를 위해 저장
+  state.targetGolfName = place.place_name;
+
   _selecting = false;
   setTimeout(()=>handleGenerate(), 150);
 }
