@@ -489,12 +489,14 @@ function renderResult(){
 
   // 날씨 - 첫 번째 골프장 주소에서 도시명 추출 (더 정확)
   const firstAddr = plan.courses?.[0]?.address || '';
-  const cityMatch = firstAddr.match(/([가-힣]+시|[가-힣]+군|[가-힣]+구)/);
+  // 주소에서 시/군/구 순서로 추출 (예: "울산광역시 울주군" → "울주군")
+  const cityMatch = firstAddr.match(/([가-힣]+(특별시|광역시|특별자치시|도)\s*)?([가-힣]+(시|군|구))/);
   const rawQuery = state.searchTab==='name'
     ? (document.getElementById('golfName').value.trim())
     : (document.getElementById('region').value.trim());
   // 주소에서 추출한 도시 우선, 없으면 입력 지역명 사용
-  const weatherQuery = cityMatch ? cityMatch[0] : rawQuery;
+  const weatherQuery = cityMatch ? (cityMatch[3] || cityMatch[0]) : rawQuery;
+  console.log('날씨 검색어:', weatherQuery, '| 원본 주소:', firstAddr);
   fetchWeather(weatherQuery, document.getElementById('playDate').value);
 
   // 필터
@@ -518,10 +520,9 @@ async function fetchWeather(regionName, dateVal){
     const results = geoData.results || [];
     const loc = results.find(r => r.country_code === 'KR') || results[0];
     if(!loc) return;
-    const {latitude:lat, longitude:lon, name:locName} = loc;
-    document.getElementById('weatherLocation').textContent = locName + ' 날씨';
-
-    // 지정일 기준 전후 3일씩 = 7일 표시, 전체 14일 요청
+    const {latitude:lat, longitude:lon, name:locName, admin1} = loc;
+    // 위치명 표시 (예: "울주군, 울산")
+    document.getElementById('weatherLocation').textContent = `${locName}${admin1?', '+admin1:''} 날씨`;
     const wRes = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=Asia%2FSeoul&forecast_days=14`
     );
