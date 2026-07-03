@@ -6,7 +6,7 @@
 <title>AI 골프장 찾기</title>
 
 <!-- PWA -->
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="/golf-app/manifest.json">
 <meta name="theme-color" content="#16A34A">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -487,11 +487,15 @@ function renderResult(){
   document.getElementById('heroSub').textContent=plan.searchDate+' · '+plan.summary;
   document.getElementById('heroTags').innerHTML=(plan.tags||[]).map(t=>`<span class="hero-tag">🏷 ${t}</span>`).join('');
 
-  // 날씨 로드
-  const query = state.searchTab==='name'
+  // 날씨 - 첫 번째 골프장 주소에서 도시명 추출 (더 정확)
+  const firstAddr = plan.courses?.[0]?.address || '';
+  const cityMatch = firstAddr.match(/([가-힣]+시|[가-힣]+군|[가-힣]+구)/);
+  const rawQuery = state.searchTab==='name'
     ? (document.getElementById('golfName').value.trim())
     : (document.getElementById('region').value.trim());
-  fetchWeather(query, document.getElementById('playDate').value);
+  // 주소에서 추출한 도시 우선, 없으면 입력 지역명 사용
+  const weatherQuery = cityMatch ? cityMatch[0] : rawQuery;
+  fetchWeather(weatherQuery, document.getElementById('playDate').value);
 
   // 필터
   const types=['전체',...new Set(plan.courses.map(c=>c.type))];
@@ -507,9 +511,12 @@ async function fetchWeather(regionName, dateVal){
   const card = document.getElementById('weatherCard');
   card.style.display='none';
   try {
-    const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(regionName)}&count=1&language=ko`);
+    // 한국(KR) 우선으로 검색, 결과 3개 중 한국 결과 선택
+    const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(regionName)}&count=5&language=ko`);
     const geoData = await geoRes.json();
-    const loc = geoData.results?.[0];
+    // 한국 결과 우선 선택
+    const results = geoData.results || [];
+    const loc = results.find(r => r.country_code === 'KR') || results[0];
     if(!loc) return;
     const {latitude:lat, longitude:lon, name:locName} = loc;
     document.getElementById('weatherLocation').textContent = locName + ' 날씨';
@@ -768,7 +775,7 @@ function resetApp(){ state.plan=null; showScreen('inputScreen'); window.scrollTo
 // 서비스 워커 등록
 if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
-    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+    navigator.serviceWorker.register('/golf-app/sw.js', {scope: '/golf-app/'}).catch(()=>{});
   });
 }
 
