@@ -196,9 +196,11 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
       <div class="field">
         <label>🔍 골프장 이름</label>
         <div style="position:relative;">
-          <input type="text" id="golfName" placeholder="예: 보라, 해운대, 동래..." autocomplete="off"
+        <input type="text" id="golfName" placeholder="예: 보라, 해운대, 동래..." autocomplete="off"
             oninput="onGolfNameInput(this.value)"
-            onkeydown="if(event.key==='Enter'&&!document.getElementById('golfDropdown').children.length){handleGenerate();}">
+            oncompositionend="onGolfNameInput(this.value)"
+            onkeyup="onGolfNameInput(this.value)"
+            onkeydown="if(event.key==='Enter'){document.getElementById('golfDropdown').style.display='none';handleGenerate();}">
           <!-- 드롭다운 -->
           <div id="golfDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #16A34A;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:100;max-height:260px;overflow-y:auto;margin-top:4px;"></div>
         </div>
@@ -811,58 +813,55 @@ async function fetchGolfSuggest(keyword){
   dd.innerHTML = '<div class="dd-loading">🔍 검색 중...</div>';
   dd.style.display = 'block';
   try {
-    // 카테고리 제한 없이 키워드+골프 검색 (더 넓은 결과)
+    // 1차: 키워드만으로 검색 (가장 넓게)
     const res = await fetch(
-      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(keyword+'골프')}&size=15`,
+      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(keyword)}&size=15`,
       { headers:{ 'Authorization':'KakaoAK '+KAKAO_KEY } }
     );
     const data = await res.json();
-    // 골프장 관련 결과만 필터링
-    const docs = (data.documents || []).filter(p=>
-      p.place_name.includes(keyword) ||
+    // 골프 관련 결과만 필터
+    let docs = (data.documents||[]).filter(p=>
       p.category_name?.includes('골프') ||
       p.place_name.includes('CC') ||
-      p.place_name.includes('컨트리')
+      p.place_name.includes('컨트리') ||
+      p.place_name.includes('골프')
     );
-    if(!docs.length){
-      // 결과 없으면 category_group_code 없이 재검색
-      const res2 = await fetch(
-        `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(keyword+' 골프장')}&size=15`,
-        { headers:{ 'Authorization':'KakaoAK '+KAKAO_KEY } }
-      );
-      const data2 = await res2.json();
-      const docs2 = data2.documents || [];
-      if(!docs2.length){
-        dd.innerHTML = '<div class="dd-loading">검색 결과 없음</div>';
-        return;
-      }
-      dd.innerHTML = docs2.map((p,i) => `
-        <div class="dd-item" onclick="selectPlace(${i},'b')">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span class="dd-name">${p.place_name}</span>
-            <span style="font-size:11px;background:#F0FDF4;color:#16A34A;border-radius:6px;padding:2px 7px;font-weight:700;flex-shrink:0;">${getRegionLabel(p.address_name)}</span>
-          </div>
-          <span class="dd-addr">${p.address_name}</span>
-        </div>`).join('');
-      window._ddPlacesB = docs2;
+
+    // 2차: "키워드+골프장" 검색
+    const res2 = await fetch(
+      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(keyword+' 골프장')}&size=15`,
+      { headers:{ 'Authorization':'KakaoAK '+KAKAO_KEY } }
+    );
+    const data2 = await res2.json();
+    const docs2 = data2.documents || [];
+
+    // 합치고 중복 제거
+    const allDocs = [...docs, ...docs2].filter((p,i,arr)=>
+      arr.findIndex(x=>x.id===p.id)===i
+    );
+
+    if(!allDocs.length){
+      dd.innerHTML = '<div class="dd-loading">결과 없음 — 직접 검색 버튼을 눌러보세요</div>';
       return;
     }
-    dd.innerHTML = docs.map((p,i) => `
-        <div class="dd-item" onclick="selectPlace(${i},'a')">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span class="dd-name">${p.place_name}</span>
-            <span style="font-size:11px;background:#F0FDF4;color:#16A34A;border-radius:6px;padding:2px 7px;font-weight:700;flex-shrink:0;">${getRegionLabel(p.address_name)}</span>
-          </div>
-          <span class="dd-addr">${p.address_name}</span>
-        </div>`).join('');
-    window._ddPlaces = docs;
+
+    window._ddPlaces = allDocs;
+    dd.innerHTML = allDocs.map((p,i) => `
+      <div class="dd-item" onclick="selectPlace(${i})">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="dd-name">${p.place_name}</span>
+          <span style="font-size:11px;background:#F0FDF4;color:#16A34A;border-radius:6px;padding:2px 7px;font-weight:700;flex-shrink:0;">${getRegionLabel(p.address_name)}</span>
+        </div>
+        <span class="dd-addr">${p.address_name}</span>
+      </div>`).join('');
+
   } catch(e){
-    dd.innerHTML = '<div class="dd-loading">검색 오류 - 직접 검색 버튼을 이용해주세요</div>';
+    dd.innerHTML = '<div class="dd-loading">오류 — 직접 검색해보세요</div>';
   }
 }
 
-function selectPlace(idx, src){
-  const place = src==='b' ? window._ddPlacesB?.[idx] : window._ddPlaces?.[idx];
+function selectPlace(idx){
+  const place = window._ddPlaces?.[idx];
   if(!place) return;
   selectedPlace = place;
   document.getElementById('golfName').value = place.place_name;
