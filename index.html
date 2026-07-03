@@ -448,10 +448,10 @@ async function handleGenerate(){
 
   let prompt;
   if(searchType === 'name'){
-    prompt=`한국 골프장 전문가. "${golfName}" 골프장 정보를 JSON으로만 반환. 마크다운 없이 순수 JSON만.
+    prompt=`한국 골프장 전문가. 이름에 "${golfName}"이 포함된 전국 모든 골프장을 JSON으로만 반환. 마크다운 없이 순수 JSON만.
 날짜=${dateStr}, 인원=${state.players}명
-{"region":"${golfName}","searchDate":"${dateStr}","summary":"한줄요약","tags":["태그1","태그2","태그3"],"courses":[{"rank":1,"name":"정식명칭","type":"퍼블릭|회원제|세미퍼블릭","address":"주소","distanceFromCenter":"차로N분","holes":"18홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1","특징2"],"greenFee":{"weekday":"12만원","weekend":"18만원","weekdayNum":120000,"weekendNum":180000,"cartFee":"팀당8만원","caddyFee":"팀당13만원"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"홈페이지","phone":"051-000-0000","advanceBooking":"2주전","availability":"가능성높음","tip":"꿀팁"},"facilities":["시설1"],"restaurants":[{"name":"식당명","category":"한식","menu":"대표메뉴","distance":"차로5분","naverSearch":"식당명 지역명"}],"recommended":true,"recommendReason":"추천이유"}]}
-규칙: 관련 골프장 1~3개, weekdayNum·weekendNum 숫자(원), 맛집 3개, 완전한 JSON만.`;
+{"region":"전국","searchDate":"${dateStr}","summary":"'${golfName}' 포함 전국 골프장 검색 결과","tags":["태그1","태그2","태그3"],"courses":[{"rank":1,"name":"정식명칭","type":"퍼블릭|회원제|세미퍼블릭","address":"주소","distanceFromCenter":"지역중심에서 차로N분","holes":"18홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1","특징2"],"greenFee":{"weekday":"12만원","weekend":"18만원","weekdayNum":120000,"weekendNum":180000,"cartFee":"팀당8만원","caddyFee":"팀당13만원"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"홈페이지","phone":"051-000-0000","advanceBooking":"2주전","availability":"가능성높음","tip":"꿀팁"},"facilities":["시설1"],"restaurants":[{"name":"식당명","category":"한식","menu":"대표메뉴","distance":"차로5분","naverSearch":"식당명 지역명"}],"recommended":true,"recommendReason":"추천이유"}]}
+규칙: 이름에 "${golfName}"이 포함된 전국 모든 골프장(지역 무관), 최대 10개, weekdayNum·weekendNum 숫자(원), 맛집 각 3개, 완전한 JSON만.`;
   } else {
     prompt=`한국 골프장 전문가. 아래 조건 골프장을 JSON으로만 반환. 마크다운 없이 순수 JSON만.
 지역=${region}, 날짜=${dateStr}, 티타임=${state.teeTime}, 인원=${state.players}명, 난이도=${state.difficulty}, 타입=${state.courseType}, 예산=${state.budget}
