@@ -199,6 +199,7 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
         <input type="text" id="golfName" placeholder="예: 보라, 해운대, 동래..."
             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="search"
             oninput="onGolfNameInput(this.value)"
+            onfocus="if(this.value.trim()&&window._ddPlaces?.length)document.getElementById('golfDropdown').style.display='block'"
             oncompositionend="setTimeout(()=>onGolfNameInput(document.getElementById('golfName').value),100)"
             onkeyup="onGolfNameInput(document.getElementById('golfName').value)"
             onkeydown="if(event.key==='Enter'){document.getElementById('golfDropdown').style.display='none';handleGenerate();}">
@@ -901,18 +902,17 @@ function selectPlace(idx){
   setTimeout(()=>handleGenerate(), 100);
 }
 
-// 외부 클릭/터치 시 닫기 (선택 중이면 무시)
-document.addEventListener('touchstart', e=>{
+// 입력창 포커스 잃으면 드롭다운 닫기 (선택 중이면 무시)
+document.getElementById('golfName') && document.getElementById('golfName').addEventListener('blur', ()=>{
+  if(!_selecting) setTimeout(()=>{ document.getElementById('golfDropdown').style.display='none'; }, 200);
+});
+
+// 외부 클릭 시 닫기
+document.addEventListener('click', e=>{
   if(_selecting) return;
   const dd = document.getElementById('golfDropdown');
-  if(dd && dd.style.display!=='none' && !dd.contains(e.target) && e.target.id!=='golfName'){
-    dd.style.display='none';
-  }
-},{passive:true});
-document.addEventListener('mousedown', e=>{
-  if(_selecting) return;
-  const dd = document.getElementById('golfDropdown');
-  if(dd && dd.style.display!=='none' && !dd.contains(e.target) && e.target.id!=='golfName'){
+  const input = document.getElementById('golfName');
+  if(dd && !dd.contains(e.target) && e.target !== input){
     dd.style.display='none';
   }
 });
