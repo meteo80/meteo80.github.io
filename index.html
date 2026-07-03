@@ -664,6 +664,19 @@ function applyFilter(type){
 function renderCourses(){
   let courses=state.activeFilter==='전체'?state.plan.courses:state.plan.courses.filter(c=>c.type===state.activeFilter);
 
+  // 결과 없을 때
+  if(!courses || courses.length===0){
+    document.getElementById('resultCount').innerHTML='<span style="color:#EF4444;">검색 결과가 없어요. 다시 시도해주세요.</span>';
+    document.getElementById('coursesList').innerHTML=`
+      <div style="text-align:center;padding:40px 20px;">
+        <div style="font-size:48px;margin-bottom:16px;">⛳</div>
+        <div style="font-size:16px;font-weight:700;color:#374151;margin-bottom:8px;">골프장 정보를 찾지 못했어요</div>
+        <div style="font-size:14px;color:#64748B;margin-bottom:20px;">Gemini AI가 해당 골프장 정보를 갖고 있지 않을 수 있어요</div>
+        <button onclick="resetApp()" style="padding:12px 24px;background:#16A34A;color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">← 다시 검색</button>
+      </div>`;
+    return;
+  }
+
   // 그린피 저렴한 순 정렬 (weekendNum 기준, 없으면 weekdayNum, 없으면 맨 뒤)
   courses = [...courses].sort((a,b)=>{
     const aFee = a.greenFee?.weekendNum || a.greenFee?.weekdayNum || 999999999;
@@ -896,10 +909,12 @@ function selectPlace(idx){
   const place = window._ddPlaces?.[idx];
   if(!place){ _selecting=false; return; }
   selectedPlace = {place_name:place.place_name, address_name:place.address_name};
+  // 골프장 검색 탭으로 명시적 전환
+  state.searchTab = 'name';
   document.getElementById('golfName').value = place.place_name;
   document.getElementById('golfDropdown').style.display='none';
   _selecting = false;
-  setTimeout(()=>handleGenerate(), 100);
+  setTimeout(()=>handleGenerate(), 150);
 }
 
 // 입력창 포커스 잃으면 드롭다운 닫기 (선택 중이면 무시)
