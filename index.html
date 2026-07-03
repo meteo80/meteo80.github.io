@@ -780,6 +780,16 @@ async function loadKakaoPhone(c, i){
   } catch(e){}
 }
 
+// 주소에서 시/도 짧게 추출 (예: "경기", "울산", "부산")
+function getRegionLabel(address){
+  if(!address) return '';
+  const m = address.match(/^([가-힣]+(?:특별시|광역시|특별자치시|특별자치도|도|시))/);
+  if(!m) return '';
+  return m[1]
+    .replace('특별시','').replace('광역시','').replace('특별자치시','')
+    .replace('특별자치도','').replace('도','').replace(/시$/,'');
+}
+
 // ── 골프장명 자동완성 (카카오 로컬 API) ──
 let ddTimer = null;
 let selectedPlace = null;
@@ -828,17 +838,23 @@ async function fetchGolfSuggest(keyword){
       }
       dd.innerHTML = docs2.map((p,i) => `
         <div class="dd-item" onclick="selectPlace(${i},'b')">
-          <span class="dd-name">${p.place_name}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="dd-name">${p.place_name}</span>
+            <span style="font-size:11px;background:#F0FDF4;color:#16A34A;border-radius:6px;padding:2px 7px;font-weight:700;flex-shrink:0;">${getRegionLabel(p.address_name)}</span>
+          </div>
           <span class="dd-addr">${p.address_name}</span>
         </div>`).join('');
       window._ddPlacesB = docs2;
       return;
     }
     dd.innerHTML = docs.map((p,i) => `
-      <div class="dd-item" onclick="selectPlace(${i},'a')">
-        <span class="dd-name">${p.place_name}</span>
-        <span class="dd-addr">${p.address_name}</span>
-      </div>`).join('');
+        <div class="dd-item" onclick="selectPlace(${i},'a')">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="dd-name">${p.place_name}</span>
+            <span style="font-size:11px;background:#F0FDF4;color:#16A34A;border-radius:6px;padding:2px 7px;font-weight:700;flex-shrink:0;">${getRegionLabel(p.address_name)}</span>
+          </div>
+          <span class="dd-addr">${p.address_name}</span>
+        </div>`).join('');
     window._ddPlaces = docs;
   } catch(e){
     dd.innerHTML = '<div class="dd-loading">검색 오류 - 직접 검색 버튼을 이용해주세요</div>';
