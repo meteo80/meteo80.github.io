@@ -782,14 +782,18 @@ async function loadKakaoPhone(c, i){
 
 // ── 골프장명 자동완성 (카카오 로컬 API) ──
 let ddTimer = null;
-let selectedPlace = null; // 선택된 골프장 카카오 정보
+let selectedPlace = null;
 
 function onGolfNameInput(val){
   selectedPlace = null;
   const dd = document.getElementById('golfDropdown');
-  if(!val || val.length < 1){ dd.style.display='none'; return; }
+  if(!val || val.length < 1){ dd.style.display='none'; dd.innerHTML=''; return; }
+  // 즉시 로딩 표시
+  dd.innerHTML = '<div class="dd-loading">🔍 검색 중...</div>';
+  dd.style.display = 'block';
+  // 딜레이 없이 바로 검색
   clearTimeout(ddTimer);
-  ddTimer = setTimeout(()=> fetchGolfSuggest(val), 300);
+  ddTimer = setTimeout(()=> fetchGolfSuggest(val), 0);
 }
 
 async function fetchGolfSuggest(keyword){
