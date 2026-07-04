@@ -195,14 +195,16 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
     <div id="search-name" style="display:none;">
       <div class="field">
         <label>🔍 골프장 이름</label>
-        <input type="text" id="golfName" placeholder="예: 보라, 해운대, 동래..."
-            autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="search"
-            oninput="onGolfNameInput(this.value)"
-            oncompositionend="setTimeout(()=>onGolfNameInput(document.getElementById('golfName').value),100)"
-            onkeydown="if(event.key==='Enter'){document.getElementById('golfSuggest').style.display='none';handleGenerate();}">
+        <div style="position:relative;">
+          <input type="text" id="golfName" placeholder="예: 보라, 해운대, 동래..."
+              autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="search"
+              oninput="onGolfNameInput(this.value)"
+              oncompositionend="setTimeout(()=>onGolfNameInput(document.getElementById('golfName').value),100)"
+              onkeydown="if(event.key==='Enter'){document.getElementById('golfSuggest').style.display='none';handleGenerate();}">
+          <!-- 드롭다운 -->
+          <div id="golfSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;background:#fff;border:1.5px solid #16A34A;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);max-height:280px;overflow-y:auto;margin-top:4px;"></div>
+        </div>
       </div>
-      <!-- 인라인 결과 목록 -->
-      <div id="golfSuggest" style="display:none;margin-top:-12px;margin-bottom:16px;border-radius:12px;overflow:hidden;border:1.5px solid #86EFAC;"></div>
     </div>
     <div class="field">
       <label>📅 라운딩 희망 날짜</label>
@@ -461,13 +463,13 @@ async function handleGenerate(){
 
   let prompt;
   if(searchType === 'name'){
-    const addrHint = state.targetGolfAddr ? ` 주소:${state.targetGolfAddr}` : '';
+    const addrHint = state.targetGolfAddr ? ` (${state.targetGolfAddr} 지역 우선)` : '';
     state.targetGolfAddr = null;
     state.targetGolfName = null;
-    prompt=`한국 골프장 전문가. "${golfName}"${addrHint} 이 골프장의 정확한 정보를 JSON으로만 반환. 마크다운 없이 순수 JSON만.
-날짜=${dateStr}, 인원=${state.players}명
-{"region":"${golfName}","searchDate":"${dateStr}","summary":"${golfName} 상세 정보","tags":["${golfName}","상세정보","골프장"],"courses":[{"rank":1,"name":"정식명칭","type":"퍼블릭|회원제|세미퍼블릭","address":"정확한주소","distanceFromCenter":"지역중심 차로N분","holes":"18홀또는27홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1","특징2","특징3"],"greenFee":{"weekday":"주중그린피","weekend":"주말그린피","weekdayNum":150000,"weekendNum":200000,"cartFee":"카트피","caddyFee":"캐디피"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"예약방법","phone":"전화번호","advanceBooking":"예약가능시점","availability":"가능성높음","tip":"예약꿀팁"},"facilities":["시설1","시설2","시설3"],"restaurants":[{"name":"식당명","category":"한식","menu":"대표메뉴","distance":"차로5분","naverSearch":"식당명 지역명"}],"recommended":true,"recommendReason":"추천이유"}]}
-규칙: "${golfName}" 골프장 정보 정확히 1개. 주소힌트(${addrHint}) 참고해 정확한 골프장 찾기. weekdayNum·weekendNum 숫자(원). 맛집 3개. 완전한 JSON만.
+    prompt=`한국 골프장 전문가. 이름에 "${golfName}"이 포함된 전국 골프장을 JSON으로만 반환. 마크다운 없이 순수 JSON만.
+날짜=${dateStr}, 인원=${state.players}명${addrHint}
+{"region":"전국","searchDate":"${dateStr}","summary":"'${golfName}' 포함 전국 골프장","tags":["전국검색","${golfName}","키워드검색"],"courses":[{"rank":1,"name":"정식명칭","type":"퍼블릭|회원제|세미퍼블릭","address":"도로명주소","distanceFromCenter":"지역중심 차로N분","holes":"18홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1","특징2"],"greenFee":{"weekday":"12만원","weekend":"18만원","weekdayNum":120000,"weekendNum":180000,"cartFee":"팀당8만원","caddyFee":"팀당13만원"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"홈페이지","phone":"051-000-0000","advanceBooking":"2주전","availability":"가능성높음","tip":"꿀팁"},"facilities":["시설1"],"restaurants":[{"name":"식당명","category":"한식","menu":"대표메뉴","distance":"차로5분","naverSearch":"식당명 지역명"}],"recommended":true,"recommendReason":"추천이유"}]}
+규칙: 이름에 "${golfName}" 포함된 전국 골프장 최대 ${state.count}개(지역 제한 없음). weekdayNum·weekendNum 숫자(원). 맛집 각 2개. 완전한 JSON만.`;
   } else {
     const targetHint = state.targetGolfName ? `\n특히 "${state.targetGolfName}"을 rank1로 반드시 포함.` : '';
     state.targetGolfName = null;
@@ -894,9 +896,10 @@ function selectPlace(idx){
   if(!place) return;
   selectedPlace = {place_name:place.place_name, address_name:place.address_name};
   state.searchTab = 'name';
-  state.targetGolfName = place.place_name;
   state.targetGolfAddr = place.address_name;
-  document.getElementById('golfName').value = place.place_name;
+  // 검색어는 골프장 이름에서 핵심 키워드만 추출 (예: "보라CC" → "보라")
+  const keyword = place.place_name.replace(/CC$|컨트리클럽$|골프클럽$|골프장$|리조트$/, '').trim();
+  document.getElementById('golfName').value = keyword;
   document.getElementById('golfSuggest').style.display='none';
   handleGenerate();
 }
