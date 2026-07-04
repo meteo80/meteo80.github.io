@@ -484,13 +484,34 @@ async function handleGenerate(){
 
   let prompt;
   if(searchType === 'name'){
-    const addrHint = state.targetGolfAddr ? `\n반드시 "${state.targetGolfAddr}" 주소의 골프장을 rank1로 포함.` : '';
+    // 내장 DB에서 매칭되는 골프장들 찾기 (정확한 이름+주소)
+    const dbMatches = GOLF_DB.filter(g=>g.name.includes(golfName)||golfName.includes(g.name.replace(/CC$|컨트리클럽$/,'')));
+    let golfListStr = '';
+    if(state.targetGolfAddr){
+      // 드롭다운에서 특정 골프장 선택한 경우 - 그것만
+      golfListStr = `1. ${golfName} (주소: ${state.targetGolfAddr})`;
+    } else if(dbMatches.length){
+      // 검색 버튼으로 검색한 경우 - DB 매칭 전체
+      golfListStr = dbMatches.slice(0,state.count).map((g,i)=>`${i+1}. ${g.name} (주소: ${g.addr})`).join('\n');
+    }
     state.targetGolfAddr = null;
     state.targetGolfName = null;
-    prompt=`한국 골프장 전문가. 이름에 "${golfName}"이 포함된 전국 골프장을 JSON으로만 반환. 마크다운 없이 순수 JSON만.
-날짜=${dateStr}, 인원=${state.players}명${addrHint}
-{"region":"전국","searchDate":"${dateStr}","summary":"'${golfName}' 포함 전국 골프장","tags":["전국검색","${golfName}","키워드검색"],"courses":[{"rank":1,"name":"정식명칭","type":"퍼블릭|회원제|세미퍼블릭","address":"도로명주소","distanceFromCenter":"지역중심 차로N분","holes":"18홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1","특징2"],"greenFee":{"weekday":"12만원","weekend":"18만원","weekdayNum":120000,"weekendNum":180000,"cartFee":"팀당8만원","caddyFee":"팀당13만원"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"홈페이지","phone":"051-000-0000","advanceBooking":"2주전","availability":"가능성높음","tip":"꿀팁"},"facilities":["시설1"],"restaurants":[{"name":"식당명","category":"한식","menu":"대표메뉴","distance":"차로5분","naverSearch":"식당명 지역명"}],"recommended":true,"recommendReason":"추천이유"}]}
-규칙: 이름에 "${golfName}" 포함된 전국 골프장 최대 ${state.count}개(지역 제한 없음). weekdayNum·weekendNum 숫자(원). 맛집 각 2개. 완전한 JSON만.`;
+
+    if(golfListStr){
+      prompt=`한국 골프장 전문가. 아래 나열된 골프장들의 상세 정보를 정확히 채워서 JSON으로만 반환. 마크다운 없이 순수 JSON만.
+날짜=${dateStr}, 인원=${state.players}명
+
+대상 골프장 (이름과 주소가 정확함 - 절대 다른 골프장으로 바꾸지 말 것):
+${golfListStr}
+
+{"region":"${golfName}","searchDate":"${dateStr}","summary":"'${golfName}' 검색 결과","tags":["${golfName}","골프장검색"],"courses":[{"rank":1,"name":"위 목록의 정확한 이름 그대로","type":"퍼블릭|회원제|세미퍼블릭","address":"위 목록의 주소 그대로","distanceFromCenter":"지역중심 차로N분","holes":"18홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1","특징2"],"greenFee":{"weekday":"12만원","weekend":"18만원","weekdayNum":120000,"weekendNum":180000,"cartFee":"팀당8만원","caddyFee":"팀당13만원"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"홈페이지","phone":"전화번호","advanceBooking":"2주전","availability":"가능성높음","tip":"꿀팁"},"facilities":["시설1"],"restaurants":[{"name":"식당명","category":"한식","menu":"대표메뉴","distance":"차로5분","naverSearch":"식당명 지역명"}],"recommended":true,"recommendReason":"추천이유"}]}
+규칙: 위 목록의 골프장만 그 이름/주소 그대로 반환(다른 골프장 추가 금지). weekdayNum·weekendNum 숫자(원). 맛집 각 2개. 완전한 JSON만.`;
+    } else {
+      prompt=`한국 골프장 전문가. 이름에 "${golfName}"이 포함된 전국 골프장을 JSON으로만 반환. 마크다운 없이 순수 JSON만.
+날짜=${dateStr}, 인원=${state.players}명
+{"region":"전국","searchDate":"${dateStr}","summary":"'${golfName}' 검색","tags":["${golfName}"],"courses":[{"rank":1,"name":"정식명칭","type":"퍼블릭|회원제|세미퍼블릭","address":"주소","distanceFromCenter":"차로N분","holes":"18홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1"],"greenFee":{"weekday":"12만원","weekend":"18만원","weekdayNum":120000,"weekendNum":180000,"cartFee":"팀당8만원","caddyFee":"팀당13만원"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"홈페이지","phone":"","advanceBooking":"2주전","availability":"가능성높음","tip":"꿀팁"},"facilities":["시설1"],"restaurants":[{"name":"식당명","category":"한식","menu":"메뉴","distance":"차로5분","naverSearch":"식당명 지역"}],"recommended":true,"recommendReason":"이유"}]}
+규칙: 실제 존재하는 골프장만 최대 ${state.count}개. weekdayNum·weekendNum 숫자. 완전한 JSON만.`;
+    }
   } else {
     const targetHint = state.targetGolfName ? `\n특히 "${state.targetGolfName}"을 rank1로 반드시 포함.` : '';
     state.targetGolfName = null;
