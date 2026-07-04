@@ -572,7 +572,7 @@ function renderResult(){
       document.getElementById('playDate').value
     );
   } else {
-    fetchWeather(weatherQuery, document.getElementById('playDate').value);
+    fetchWeather(weatherQuery, document.getElementById('playDate').value, rawQuery);
   }
 
   // 필터
@@ -600,22 +600,20 @@ async function fetchWeatherByCoords(lat, lon, placeName, dateVal){
 }
 
 // 날씨 위젯 (Open-Meteo 무료 API) - 지정일 전후 7일
-async function fetchWeather(regionName, dateVal){
+async function fetchWeather(regionName, dateVal, fallbackName){
   const card = document.getElementById('weatherCard');
   card.style.display='none';
   try {
-    // 한국(KR) 우선으로 검색, 결과 3개 중 한국 결과 선택
-    const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(regionName)}&count=5&language=ko`);
-    const geoData = await geoRes.json();
-    // 한국 결과 우선 선택
-    const results = geoData.results || [];
-    const loc = results.find(r => r.country_code === 'KR') || results[0];
+    let loc = await geocodeKR(regionName);
+    // 1차 실패 시 폴백 검색어로 재시도
+    if(!loc && fallbackName && fallbackName !== regionName){
+      loc = await geocodeKR(fallbackName);
+    }
     if(!loc) return;
     const lat = loc.latitude;
     const lon = loc.longitude;
     const locName = loc.name || regionName;
     const admin1 = loc.admin1 || '';
-    // 위치명 표시
     document.getElementById('weatherLocation').textContent = `📍 ${locName}${admin1 ? ' · '+admin1 : ''}`;
     const wRes = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=Asia%2FSeoul&forecast_days=14`
@@ -624,6 +622,16 @@ async function fetchWeather(regionName, dateVal){
     renderWeather(wData.daily, dateVal);
     card.style.display='block';
   } catch(e){ console.log('날씨 오류',e); }
+}
+
+async function geocodeKR(name){
+  if(!name) return null;
+  try {
+    const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(name)}&count=5&language=ko`);
+    const geoData = await geoRes.json();
+    const results = geoData.results || [];
+    return results.find(r => r.country_code === 'KR') || results[0] || null;
+  } catch(e){ return null; }
 }
 
 function renderWeather(d, dateVal){
