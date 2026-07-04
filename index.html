@@ -378,7 +378,6 @@ function switchTab(type){
 }
 
 window.addEventListener('DOMContentLoaded', ()=>{
-  if(!getApiKey()) showKeyModal();
   state.searchTab = 'region';
   const today = new Date();
   document.getElementById('playDate').value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
