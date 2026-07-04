@@ -451,7 +451,7 @@ function startLoadAnim(region){
 }
 function stopLoadAnim(){ if(loadTimer){ clearInterval(loadTimer); loadTimer=null; } }
 
-async function callGemini(prompt, apiKey, modelIdx=0, retries=2, keyRotated=false){
+async function callGemini(prompt, apiKey, modelIdx=0, retries=2, keyAttempt=0){
   const model=MODELS[modelIdx]||MODELS[0];
   for(let i=0;i<=retries;i++){
     try{
@@ -466,13 +466,13 @@ async function callGemini(prompt, apiKey, modelIdx=0, retries=2, keyRotated=fals
       if(data.error){
         const msg=data.error.message||'';
         const isQuota = msg.includes('high demand')||msg.includes('overloaded')||msg.includes('quota');
-        if(isQuota && modelIdx+1<MODELS.length) return callGemini(prompt,apiKey,modelIdx+1,retries,keyRotated);
-        // 모든 모델에서 할당량 초과 시, 내장 키 사용 중이면 다음 키로 자동 전환
-        if(isQuota && !keyRotated && !localStorage.getItem('gemini_golf_key') && GEMINI_KEYS.length>1){
-          const nextIdx = (currentKeyIdx+1) % GEMINI_KEYS.length;
+        if(isQuota && modelIdx+1<MODELS.length) return callGemini(prompt,apiKey,modelIdx+1,retries,keyAttempt);
+        // 모든 모델에서 할당량 초과 시, 내장 키 사용 중이면 다음 키로 전환 (전체 키 순환)
+        if(isQuota && !localStorage.getItem('gemini_golf_key') && GEMINI_KEYS.length>1 && keyAttempt+1<GEMINI_KEYS.length){
+          const nextIdx = (currentKeyIdx+keyAttempt+1) % GEMINI_KEYS.length;
           localStorage.setItem('gemini_key_idx', nextIdx);
           const nextKey = GEMINI_KEYS[nextIdx];
-          return callGemini(prompt, nextKey, 0, retries, true);
+          return callGemini(prompt, nextKey, 0, retries, keyAttempt+1);
         }
         if(i<retries){ await new Promise(r=>setTimeout(r,2000*(i+1))); continue; }
         throw new Error(msg);
