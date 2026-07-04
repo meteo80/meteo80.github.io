@@ -883,7 +883,11 @@ function onGolfNameInput(val){
       window._ddPlaces = filtered.map(g=>({place_name:g.name,address_name:g.addr}));
       const hi = s => s.replace(new RegExp(realVal,'g'),'<b style="color:#16A34A">'+realVal+'</b>');
       dd.innerHTML = filtered.map((g,i)=>`
-        <div class="dd-item" onclick="selectPlace(${i})" style="cursor:pointer;">
+        <div class="dd-item"
+          ontouchstart="event.preventDefault();event.stopPropagation();"
+          ontouchend="event.preventDefault();selectPlace(${i});"
+          onmousedown="event.preventDefault();selectPlace(${i});"
+          style="cursor:pointer;min-height:48px;">
           <div style="display:flex;align-items:center;gap:6px;">
             <span class="dd-name">${hi(g.name)}</span>
             <span style="font-size:11px;background:#F0FDF4;color:#16A34A;border-radius:6px;padding:2px 7px;font-weight:700;flex-shrink:0;">${getRegionLabel(g.addr)}</span>
