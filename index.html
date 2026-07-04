@@ -182,6 +182,12 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
     <span class="ai-badge">✨ Gemini AI · 무료</span>
   </div>
   <div class="card">
+    <!-- 라운딩 희망 날짜 (최상단) -->
+    <div class="field">
+      <label>📅 라운딩 희망 날짜</label>
+      <input type="date" id="playDate">
+    </div>
+
     <!-- 검색 타입 탭 -->
     <div style="display:flex;background:#F1F5F9;border-radius:12px;padding:4px;margin-bottom:20px;gap:4px;">
       <button id="tab-region" onclick="switchTab('region')"
@@ -223,10 +229,6 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
           </div>
         </div>
       </div>
-    </div>
-    <div class="field">
-      <label>📅 라운딩 희망 날짜</label>
-      <input type="date" id="playDate">
     </div>
     <div class="field">
       <label>⏰ 선호 티타임</label>
@@ -368,6 +370,7 @@ const GEMINI_KEYS = [
   atob('QVEuQWI4Uk42SzBnRTh3TWtyTGhkdzhaczUxSnZmakF0c21aWFRHbHRZWGk1a2Jxc1F4Tnc='),
   atob('QVEuQWI4Uk42TFZwWTRXTjRXdjJmLUkxdU1jc2lybVRfeUNxc0hEWGxVellqdGRKMVJFekE='),
   atob('QVEuQWI4Uk42Sm9nWTJPdUNYZ3ZZLTM0NllkNWZOQUZ6VUs4MHRZNzl3YzJ5eF9ubnZoSFE='),
+  atob('QVEuQWI4Uk42Slh4bFhEWGlkanNmZUNwWWhwempTM2o4WmxKRjFsNVI5eWdCd2hnTjJRWGc='),
   // 새 키 추가시 여기에 atob('base64인코딩') 형태로 콤마 추가
 ].filter(Boolean);
 let currentKeyIdx = parseInt(localStorage.getItem('gemini_key_idx')||'0') % GEMINI_KEYS.length;
