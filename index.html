@@ -574,7 +574,7 @@ function renderResult(){
       document.getElementById('playDate').value
     );
   } else {
-    fetchWeather(weatherQuery, document.getElementById('playDate').value, rawQuery, oneWordQuery);
+    fetchWeather(weatherQuery, document.getElementById('playDate').value, rawQuery, oneWordQuery, addrParts);
   }
 
   // 필터
@@ -602,11 +602,18 @@ async function fetchWeatherByCoords(lat, lon, placeName, dateVal){
 }
 
 // 날씨 위젯 (Open-Meteo 무료 API) - 지정일 전후 7일
-async function fetchWeather(regionName, dateVal, fallbackName, fallback2){
+async function fetchWeather(regionName, dateVal, fallbackName, fallback2, addrParts){
   const card = document.getElementById('weatherCard');
   card.style.display='none';
   try {
-    let loc = await geocodeKR(regionName);
+    // 1순위: 내장 좌표 테이블에서 즉시 조회 (가장 빠르고 확실함)
+    let loc = null;
+    if(addrParts){
+      const kr = lookupKrCoords(addrParts);
+      if(kr) loc = {latitude:kr.coords[0], longitude:kr.coords[1], name:kr.name, admin1:''};
+    }
+    // 2순위: Open-Meteo 지오코딩 API
+    if(!loc) loc = await geocodeKR(regionName);
     if(!loc && fallback2 && fallback2 !== regionName){
       loc = await geocodeKR(fallback2);
     }
@@ -614,7 +621,6 @@ async function fetchWeather(regionName, dateVal, fallbackName, fallback2){
       loc = await geocodeKR(fallbackName);
     }
     if(!loc){
-      // 지오코딩 완전 실패 - 사용자에게 알림
       card.style.display='block';
       document.getElementById('weatherLocation').textContent = `📍 위치 찾기 실패`;
       document.getElementById('weatherTodayBig').innerHTML = '';
@@ -988,6 +994,41 @@ const GOLF_DB = [
   {name:'우리들CC',addr:'제주 제주시'},
   {name:'롯데스카이힐 제주CC',addr:'제주 서귀포시'},
 ];
+
+// 한국 주요 도시 좌표 내장 (지오코딩 API 실패 대비 최종 폴백)
+const KR_CITY_COORDS = {
+  '서울':[37.5665,126.9780],'부산':[35.1796,129.0756],'대구':[35.8714,128.6014],
+  '인천':[37.4563,126.7052],'광주':[35.1595,126.8526],'대전':[36.3504,127.3845],
+  '울산':[35.5384,129.3114],'세종':[36.4801,127.2890],
+  '경기':[37.4138,127.5183],'강원':[37.8228,128.1555],
+  '충북':[36.8000,127.7000],'충남':[36.5184,126.8000],
+  '전북':[35.7175,127.1530],'전남':[34.8679,126.9910],
+  '경북':[36.4919,128.8889],'경남':[35.4606,128.2132],
+  '제주':[33.4996,126.5312],
+  '기장군':[35.2440,129.2140],'울주군':[35.5220,129.2430],'금정구':[35.2430,129.0920],
+  '동래구':[35.2050,129.0840],'해운대구':[35.1630,129.1636],'수영구':[35.1454,129.1130],
+  '용인시':[37.2411,127.1776],'성남시':[37.4201,127.1265],'광주시':[37.4292,127.2551],
+  '수원시':[37.2636,127.0286],'고양시':[37.6584,126.8320],'파주시':[37.7599,126.7802],
+  '이천시':[37.2724,127.4351],'여주시':[37.2984,127.6373],'가평군':[37.8315,127.5095],
+  '포천시':[37.8949,127.2004],'양평군':[37.4917,127.4874],
+  '춘천시':[37.8813,127.7300],'원주시':[37.3422,127.9202],'평창군':[37.3705,128.3900],
+  '속초시':[38.2070,128.5918],'홍천군':[37.6970,127.8890],'횡성군':[37.4914,127.9848],
+  '천안시':[36.8151,127.1139],'아산시':[36.7898,127.0018],'청주시':[36.6424,127.4890],
+  '전주시':[35.8242,127.1480],'익산시':[35.9483,126.9576],'군산시':[35.9676,126.7369],
+  '여수시':[34.7604,127.6622],'순천시':[34.9506,127.4873],
+  '경산시':[35.8250,128.7411],'포항시':[36.0190,129.3435],'구미시':[36.1195,128.3446],
+  '경주시':[35.8562,129.2247],'창원시':[35.2280,128.6811],'진주시':[35.1800,128.1076],
+  '통영시':[34.8544,128.4331],'거제시':[34.8806,128.6212],'양산시':[35.3350,129.0378],
+  '김해시':[35.2285,128.8894],'제주시':[33.4996,126.5312],'서귀포시':[33.2540,126.5601],
+};
+
+function lookupKrCoords(addrParts){
+  for(let i=0;i<addrParts.length;i++){
+    const key = addrParts[i];
+    if(KR_CITY_COORDS[key]) return {coords:KR_CITY_COORDS[key], name:key};
+  }
+  return null;
+}
 
 // ── 골프장명 자동완성 (네이티브 select) ──
 let selectedPlace = null;
