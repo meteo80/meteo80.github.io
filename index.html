@@ -466,20 +466,13 @@ async function handleGenerate(){
 
   let prompt;
   if(searchType === 'name'){
-    prompt=`너는 한국 전국 골프장 데이터베이스 전문가야. 아래 키워드가 이름에 포함된 골프장을 전국에서 빠짐없이 찾아줘.
-
-검색 키워드: "${golfName}"
-날짜: ${dateStr}, 인원: ${state.players}명
-
-반드시 지켜야 할 규칙:
-1. "${golfName}"이라는 글자가 골프장 이름 어디에든 들어가면 무조건 포함
-2. 지역 제한 없이 전국 모든 골프장 검색 (경기도, 서울, 부산, 울산, 경남, 경북, 전라, 충청, 강원, 제주 모두 포함)
-3. 최대 ${state.count}개까지 반환
-4. 잘 알려진 골프장뿐 아니라 덜 알려진 골프장도 포함
-
-JSON만 반환, 마크다운 없음:
-{"region":"전국","searchDate":"${dateStr}","summary":"'${golfName}' 포함 전국 골프장","tags":["전국검색","${golfName}","키워드검색"],"courses":[{"rank":1,"name":"정식명칭","type":"퍼블릭|회원제|세미퍼블릭","address":"도로명주소","distanceFromCenter":"지역중심에서 차로N분","holes":"18홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1","특징2"],"greenFee":{"weekday":"12만원","weekend":"18만원","weekdayNum":120000,"weekendNum":180000,"cartFee":"팀당8만원","caddyFee":"팀당13만원"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"홈페이지","phone":"052-000-0000","advanceBooking":"2주전","availability":"가능성높음","tip":"꿀팁"},"facilities":["시설1"],"restaurants":[{"name":"식당명","category":"한식","menu":"대표메뉴","distance":"차로5분","naverSearch":"식당명 지역명"}],"recommended":true,"recommendReason":"추천이유"}]}
-완전한 JSON만 출력.`;
+    const addrHint = state.targetGolfAddr ? ` 주소:${state.targetGolfAddr}` : '';
+    state.targetGolfAddr = null;
+    state.targetGolfName = null;
+    prompt=`한국 골프장 전문가. "${golfName}"${addrHint} 이 골프장의 정확한 정보를 JSON으로만 반환. 마크다운 없이 순수 JSON만.
+날짜=${dateStr}, 인원=${state.players}명
+{"region":"${golfName}","searchDate":"${dateStr}","summary":"${golfName} 상세 정보","tags":["${golfName}","상세정보","골프장"],"courses":[{"rank":1,"name":"정식명칭","type":"퍼블릭|회원제|세미퍼블릭","address":"정확한주소","distanceFromCenter":"지역중심 차로N분","holes":"18홀또는27홀","par":72,"yardage":"6500야드","difficulty":"중급","features":["특징1","특징2","특징3"],"greenFee":{"weekday":"주중그린피","weekend":"주말그린피","weekdayNum":150000,"weekendNum":200000,"cartFee":"카트피","caddyFee":"캐디피"},"totalEstimate":"${state.players}명 총비용","reservation":{"method":"예약방법","phone":"전화번호","advanceBooking":"예약가능시점","availability":"가능성높음","tip":"예약꿀팁"},"facilities":["시설1","시설2","시설3"],"restaurants":[{"name":"식당명","category":"한식","menu":"대표메뉴","distance":"차로5분","naverSearch":"식당명 지역명"}],"recommended":true,"recommendReason":"추천이유"}]}
+규칙: "${golfName}" 골프장 정보 정확히 1개. 주소힌트(${addrHint}) 참고해 정확한 골프장 찾기. weekdayNum·weekendNum 숫자(원). 맛집 3개. 완전한 JSON만.
   } else {
     const targetHint = state.targetGolfName ? `\n특히 "${state.targetGolfName}"을 rank1로 반드시 포함.` : '';
     state.targetGolfName = null;
@@ -911,21 +904,11 @@ function selectPlace(idx){
   const place = window._ddPlaces?.[idx];
   if(!place){ _selecting=false; return; }
   selectedPlace = {place_name:place.place_name, address_name:place.address_name};
-
-  // 주소에서 지역 추출 (예: "부산 기장군 정관읍" → "부산 기장군")
-  const addrParts = place.address_name.split(' ');
-  const regionFromAddr = addrParts.slice(0,2).join(' '); // 시+군/구
-
-  // 지역 검색 탭으로 전환하고 지역명 입력
-  state.searchTab = 'region';
-  switchTab('region');
-  document.getElementById('region').value = regionFromAddr;
+  state.searchTab = 'name';
+  state.targetGolfName = place.place_name;
+  state.targetGolfAddr = place.address_name;
   document.getElementById('golfName').value = place.place_name;
   document.getElementById('golfDropdown').style.display='none';
-
-  // 검색 제목에 골프장명 표시를 위해 저장
-  state.targetGolfName = place.place_name;
-
   _selecting = false;
   setTimeout(()=>handleGenerate(), 150);
 }
