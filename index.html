@@ -161,6 +161,21 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
 </head>
 <body>
 
+<!-- API 키 모달 -->
+<div id="apiModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;display:none;align-items:center;justify-content:center;padding:20px;">
+  <div class="modal-box">
+    <h2>🔑 Gemini API 키 입력</h2>
+    <p>검색을 위해 API 키가 필요해요.<br>
+      <a href="https://aistudio.google.com/apikey" target="_blank">👉 aistudio.google.com</a>에서 무료 발급
+    </p>
+    <input type="password" id="apiKeyInput" placeholder="AIza..." autocomplete="off">
+    <button class="modal-btn" onclick="saveKey()">저장하고 검색하기 →</button>
+  </div>
+</div>
+
+<!-- 골프장 드롭다운 (카드 밖, body에 직접) -->
+<div id="golfSuggest" style="display:none;position:fixed;z-index:500;background:#fff;border:1.5px solid #16A34A;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.2);max-height:300px;overflow-y:auto;left:16px;right:16px;"></div>
+
 <!-- 입력 화면 -->
 <div id="inputScreen" class="screen active">
   <div class="header">
@@ -195,15 +210,11 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
     <div id="search-name" style="display:none;">
       <div class="field">
         <label>🔍 골프장 이름</label>
-        <div style="position:relative;">
-          <input type="text" id="golfName" placeholder="예: 보라, 해운대, 동래..."
-              autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="search"
-              oninput="onGolfNameInput(this.value)"
-              oncompositionend="setTimeout(()=>onGolfNameInput(document.getElementById('golfName').value),100)"
-              onkeydown="if(event.key==='Enter'){document.getElementById('golfSuggest').style.display='none';handleGenerate();}">
-          <!-- 드롭다운 -->
-          <div id="golfSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;background:#fff;border:1.5px solid #16A34A;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);max-height:280px;overflow-y:auto;margin-top:4px;"></div>
-        </div>
+        <input type="text" id="golfName" placeholder="예: 보라, 해운대, 동래..."
+            autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="search"
+            oninput="onGolfNameInput(this.value)"
+            oncompositionend="setTimeout(()=>onGolfNameInput(document.getElementById('golfName').value),100)"
+            onkeydown="if(event.key==='Enter'){document.getElementById('golfSuggest').style.display='none';handleGenerate();}">
       </div>
     </div>
     <div class="field">
@@ -350,13 +361,16 @@ const state = { players:4, teeTime:'상관없음', difficulty:'전체', courseTy
 function getApiKey(){ return localStorage.getItem('gemini_golf_key') || GEMINI_KEY_DEFAULT; }
 function getKakaoKey(){ return localStorage.getItem('kakao_rest_key') || KAKAO_KEY; }
 
+function saveKey(){
+  const k = document.getElementById('apiKeyInput').value.trim();
+  if(!k){ alert('키를 입력해주세요'); return; }
+  localStorage.setItem('gemini_golf_key', k);
+  document.getElementById('apiModal').style.display='none';
+  handleGenerate();
+}
 function showKeyModal(){
-  const current = localStorage.getItem('gemini_golf_key') || '';
-  const key = prompt('🔑 Gemini API 키 입력\n(aistudio.google.com에서 무료 발급)\n\n현재 키가 할당량 초과 시 새 키를 입력하세요:', current);
-  if(key && key.trim()) {
-    localStorage.setItem('gemini_golf_key', key.trim());
-    alert('✅ 새 API 키가 저장됐어요!');
-  }
+  document.getElementById('apiKeyInput').value = getApiKey();
+  document.getElementById('apiModal').style.display='flex';
 }
 
 function switchTab(type){
@@ -453,12 +467,7 @@ async function handleGenerate(){
   if(!query){ errEl.textContent='지역 또는 골프장명을 입력해 주세요 📍'; errEl.style.display='block'; return; }
   errEl.style.display='none';
   const apiKey=getApiKey();
-  if(!apiKey){
-    const k = prompt('🔑 Gemini API 키를 입력해주세요\n(aistudio.google.com에서 무료 발급)');
-    if(k && k.trim()){
-      localStorage.setItem('gemini_golf_key', k.trim());
-    } else { return; }
-  }
+  if(!apiKey){ showKeyModal(); return; }
 
   const dateVal=document.getElementById('playDate').value;
   const dateStr=dateVal?new Date(dateVal).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'}):'미정';
@@ -885,14 +894,20 @@ function onGolfNameInput(val){
     const hi = s => s.replace(new RegExp(realVal,'g'),'<b style="color:#16A34A">'+realVal+'</b>');
     sg.innerHTML = filtered.map((g,i)=>`
       <a href="javascript:void(0)" onclick="selectPlace(${i})"
-        style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #F1F5F9;background:#fff;text-decoration:none;-webkit-tap-highlight-color:rgba(22,163,74,.15);">
+        style="display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:1px solid #F1F5F9;background:#fff;text-decoration:none;">
         <div>
-          <div style="font-size:14px;font-weight:700;color:#1E293B;">${hi(g.name)}</div>
+          <div style="font-size:15px;font-weight:700;color:#1E293B;">${hi(g.name)}</div>
           <div style="font-size:12px;color:#94A3B8;margin-top:2px;">${g.addr}</div>
         </div>
-        <span style="font-size:11px;background:#F0FDF4;color:#16A34A;border-radius:6px;padding:3px 8px;font-weight:700;flex-shrink:0;margin-left:8px;">${getRegionLabel(g.addr)}</span>
+        <span style="font-size:11px;background:#F0FDF4;color:#16A34A;border-radius:6px;padding:3px 8px;font-weight:700;margin-left:8px;flex-shrink:0;">${getRegionLabel(g.addr)}</span>
       </a>`).join('');
-    sg.style.display='block';
+    // 입력창 아래에 정확히 위치
+    const input = document.getElementById('golfName');
+    const rect = input.getBoundingClientRect();
+    sg.style.top = (rect.bottom + 4) + 'px';
+    sg.style.left = '16px';
+    sg.style.right = '16px';
+    sg.style.display = 'block';
   }, 100);
 }
 
