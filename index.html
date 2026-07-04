@@ -605,11 +605,17 @@ async function fetchWeather(regionName, dateVal, fallbackName){
   card.style.display='none';
   try {
     let loc = await geocodeKR(regionName);
-    // 1차 실패 시 폴백 검색어로 재시도
     if(!loc && fallbackName && fallbackName !== regionName){
       loc = await geocodeKR(fallbackName);
     }
-    if(!loc) return;
+    if(!loc){
+      // 지오코딩 완전 실패 - 사용자에게 알림
+      card.style.display='block';
+      document.getElementById('weatherLocation').textContent = `📍 위치 찾기 실패`;
+      document.getElementById('weatherTodayBig').innerHTML = '';
+      document.getElementById('weatherContent').innerHTML = `<div style="color:rgba(255,255,255,.8);font-size:13px;padding:8px;">날씨 정보를 가져올 수 없어요 (지역: ${regionName})</div>`;
+      return;
+    }
     const lat = loc.latitude;
     const lon = loc.longitude;
     const locName = loc.name || regionName;
@@ -618,10 +624,19 @@ async function fetchWeather(regionName, dateVal, fallbackName){
     const wRes = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_sum,windspeed_10m_max&timezone=Asia%2FSeoul&forecast_days=14`
     );
+    if(!wRes.ok){
+      card.style.display='block';
+      document.getElementById('weatherContent').innerHTML = `<div style="color:rgba(255,255,255,.8);font-size:13px;padding:8px;">날씨 API 오류 (${wRes.status})</div>`;
+      return;
+    }
     const wData = await wRes.json();
     renderWeather(wData.daily, dateVal);
     card.style.display='block';
-  } catch(e){ console.log('날씨 오류',e); }
+  } catch(e){
+    card.style.display='block';
+    document.getElementById('weatherLocation').textContent = `📍 날씨 오류`;
+    document.getElementById('weatherContent').innerHTML = `<div style="color:rgba(255,255,255,.8);font-size:13px;padding:8px;">${e.message||e}</div>`;
+  }
 }
 
 async function geocodeKR(name){
