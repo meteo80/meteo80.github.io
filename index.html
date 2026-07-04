@@ -468,7 +468,7 @@ async function callGemini(prompt, apiKey, modelIdx=0, retries=2, keyAttempt=0){
         const isQuota = msg.includes('high demand')||msg.includes('overloaded')||msg.includes('quota');
         if(isQuota && modelIdx+1<MODELS.length) return callGemini(prompt,apiKey,modelIdx+1,retries,keyAttempt);
         // 모든 모델에서 할당량 초과 시, 내장 키 사용 중이면 다음 키로 전환 (전체 키 순환)
-        if(isQuota && !localStorage.getItem('gemini_golf_key') && GEMINI_KEYS.length>1 && keyAttempt+1<GEMINI_KEYS.length){
+        if(isQuota && GEMINI_KEYS.length>1 && keyAttempt+1<GEMINI_KEYS.length){
           const nextIdx = (currentKeyIdx+keyAttempt+1) % GEMINI_KEYS.length;
           localStorage.setItem('gemini_key_idx', nextIdx);
           const nextKey = GEMINI_KEYS[nextIdx];
