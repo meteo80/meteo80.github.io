@@ -516,9 +516,15 @@ async function handleGenerate(){
   }catch(e){
     stopLoadAnim();
     showScreen('inputScreen');
-    const errEl2=document.getElementById('regionError');
-    errEl2.textContent='오류: '+(e.message||'검색 실패. API 키를 확인하거나 다시 시도해 주세요.');
-    errEl2.style.display='block';
+    const msg = e.message || '검색 실패';
+    if(msg.includes('quota')||msg.includes('exceeded')||msg.includes('limit')){
+      alert('⚠️ API 키 할당량 초과!\n\naistudio.google.com에서\n새 API 키를 발급받아\n🔑 API 키 변경 버튼으로 입력해주세요.');
+    } else if(msg.includes('API key')||msg.includes('invalid')){
+      alert('⚠️ API 키 오류!\n\n🔑 API 키 변경 버튼으로\n올바른 키를 입력해주세요.');
+      showKeyModal();
+    } else {
+      alert('오류: ' + msg);
+    }
   }
 }
 
