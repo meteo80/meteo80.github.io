@@ -364,6 +364,7 @@ const MODELS = ['gemini-2.0-flash','gemini-2.0-flash-lite','gemini-2.5-flash'];
 // 여러 API 키 순환 사용 (할당량 초과 시 자동 전환)
 const GEMINI_KEYS = [
   atob('QVEuQWI4Uk42TFVUOHRzWWFXNzZYYlBTUW5YWC1ka1Rla2pGdWJXLXhBQmJMM1dSZ0ExWFE='),
+  atob('QVEuQWI4Uk42TGV4ekdKQkx0V01oT05KeWNvVml2ZHZXVkJybkxkV09STnBoc05sNkM0bGc='),
   // 새 키 추가시 여기에 atob('base64인코딩') 형태로 콤마 추가
 ].filter(Boolean);
 let currentKeyIdx = parseInt(localStorage.getItem('gemini_key_idx')||'0') % GEMINI_KEYS.length;
