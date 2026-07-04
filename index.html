@@ -555,15 +555,15 @@ function renderResult(){
   document.getElementById('heroSub').textContent=plan.searchDate+' · '+plan.summary;
   document.getElementById('heroTags').innerHTML=(plan.tags||[]).map(t=>`<span class="hero-tag">🏷 ${t}</span>`).join('');
 
-  // 날씨 - 첫 번째 골프장 주소에서 "시/도 + 시/군/구" 조합으로 추출 (정확도 향상)
+  // 날씨 - 주소 앞 2단어(시/도 + 시/군/구)를 그대로 사용 (가장 정확)
   const firstAddr = plan.courses?.[0]?.address || '';
-  const cityMatch = firstAddr.match(/^([가-힣]+(?:특별시|광역시|특별자치시|특별자치도|도))\s*([가-힣]+(?:시|군|구))/);
-  const cityOnlyMatch = firstAddr.match(/([가-힣]+(?:시|군|구))/);
+  const addrParts = firstAddr.trim().split(/\s+/).filter(Boolean);
+  const twoWordQuery = addrParts.slice(0,2).join(' '); // 예: "부산 기장군"
+  const oneWordQuery = addrParts[1] || addrParts[0] || ''; // 예: "기장군"
   const rawQuery = state.searchTab==='name'
     ? (document.getElementById('golfName').value.trim())
     : (document.getElementById('region').value.trim());
-  // "부산 금정구" 형태로 검색 (시/도 있으면 포함, 없으면 시/군/구만)
-  const weatherQuery = cityMatch ? (cityMatch[1]+' '+cityMatch[2]) : (cityOnlyMatch ? cityOnlyMatch[0] : rawQuery);
+  const weatherQuery = twoWordQuery || rawQuery;
 
   // 카카오 선택된 장소의 좌표가 있으면 바로 사용
   if(selectedPlace && selectedPlace.y && selectedPlace.x){
@@ -574,9 +574,7 @@ function renderResult(){
       document.getElementById('playDate').value
     );
   } else {
-    // 폴백 순서: 정확한 도시명 → 시/군/구만 → 원본 검색어
-    const fallback2 = cityOnlyMatch ? cityOnlyMatch[0] : null;
-    fetchWeather(weatherQuery, document.getElementById('playDate').value, rawQuery, fallback2);
+    fetchWeather(weatherQuery, document.getElementById('playDate').value, rawQuery, oneWordQuery);
   }
 
   // 필터
