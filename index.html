@@ -884,8 +884,7 @@ function onGolfNameInput(val){
       window._ddPlaces = filtered.map(g=>({place_name:g.name,address_name:g.addr}));
       const hi = s => s.replace(new RegExp(realVal,'g'),'<b style="color:#16A34A">'+realVal+'</b>');
       dd.innerHTML = filtered.map((g,i)=>`
-        <div class="dd-item" onclick="_selecting=true;selectPlace(${i})"
-          style="cursor:pointer;-webkit-tap-highlight-color:rgba(22,163,74,.1);">
+        <div class="dd-item" onclick="selectPlace(${i})" style="cursor:pointer;">
           <div style="display:flex;align-items:center;gap:6px;">
             <span class="dd-name">${hi(g.name)}</span>
             <span style="font-size:11px;background:#F0FDF4;color:#16A34A;border-radius:6px;padding:2px 7px;font-weight:700;flex-shrink:0;">${getRegionLabel(g.addr)}</span>
@@ -909,21 +908,15 @@ function selectPlace(idx){
   state.targetGolfAddr = place.address_name;
   document.getElementById('golfName').value = place.place_name;
   document.getElementById('golfDropdown').style.display='none';
-  _selecting = false;
-  setTimeout(()=>handleGenerate(), 150);
+  handleGenerate();
+  setTimeout(()=>{ _selecting = false; }, 500);
 }
 
-// 입력창 포커스 잃으면 드롭다운 닫기 (선택 중이면 무시)
-document.getElementById('golfName') && document.getElementById('golfName').addEventListener('blur', ()=>{
-  if(!_selecting) setTimeout(()=>{ document.getElementById('golfDropdown').style.display='none'; }, 200);
-});
-
-// 외부 클릭 시 닫기
+// 입력창 포커스 잃으면 드롭다운 닫기
 document.addEventListener('click', e=>{
   if(_selecting) return;
   const dd = document.getElementById('golfDropdown');
-  const input = document.getElementById('golfName');
-  if(dd && !dd.contains(e.target) && e.target !== input){
+  if(dd && !dd.contains(e.target) && e.target.id !== 'golfName'){
     dd.style.display='none';
   }
 });
