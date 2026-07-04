@@ -1,7 +1,7 @@
 {
-  "name": "AI 골프장 찾기",
+  "name": "전국 골프장 찾기",
   "short_name": "골프장 찾기",
-  "description": "AI가 추천하는 골프장 검색 & 예약 정보",
+  "description": "AI가 추천하는 전국 골프장 검색 & 예약 정보",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
