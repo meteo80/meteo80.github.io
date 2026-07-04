@@ -621,6 +621,13 @@ async function fetchWeather(regionName, dateVal, fallbackName, fallback2, addrPa
       loc = await geocodeKR(fallbackName);
     }
     if(!loc){
+      // 최종 폴백: 주소 첫 단어(시/도 단위)로 좌표 재시도
+      const cityLevel = addrParts && addrParts[0] ? addrParts[0].replace(/(특별시|광역시|특별자치시|특별자치도)$/,'') : null;
+      if(cityLevel && KR_CITY_COORDS[cityLevel]){
+        loc = {latitude:KR_CITY_COORDS[cityLevel][0], longitude:KR_CITY_COORDS[cityLevel][1], name:cityLevel, admin1:''};
+      }
+    }
+    if(!loc){
       card.style.display='block';
       document.getElementById('weatherLocation').textContent = `📍 위치 찾기 실패`;
       document.getElementById('weatherTodayBig').innerHTML = '';
