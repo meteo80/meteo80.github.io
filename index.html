@@ -213,6 +213,7 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
         <input type="text" id="golfName" placeholder="예: 보라, 해운대, 동래..."
             autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="search"
             oninput="onGolfNameInput(this.value)"
+            onfocus="onGolfNameInput(this.value)"
             oncompositionend="setTimeout(()=>onGolfNameInput(document.getElementById('golfName').value),100)"
             onkeydown="if(event.key==='Enter'){document.getElementById('golfSuggest').style.display='none';handleGenerate();}">
       </div>
