@@ -453,7 +453,12 @@ async function handleGenerate(){
   if(!query){ errEl.textContent='지역 또는 골프장명을 입력해 주세요 📍'; errEl.style.display='block'; return; }
   errEl.style.display='none';
   const apiKey=getApiKey();
-  if(!apiKey){ return; }
+  if(!apiKey){
+    const k = prompt('🔑 Gemini API 키를 입력해주세요\n(aistudio.google.com에서 무료 발급)');
+    if(k && k.trim()){
+      localStorage.setItem('gemini_golf_key', k.trim());
+    } else { return; }
+  }
 
   const dateVal=document.getElementById('playDate').value;
   const dateStr=dateVal?new Date(dateVal).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'}):'미정';
