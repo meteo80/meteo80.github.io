@@ -1252,7 +1252,7 @@ function resetApp(){
       <div style="font-size:12px;color:#64748B;">홈화면에 추가하면 앱처럼 사용!</div>
     </div>
     <button id="installBtn" style="padding:9px 16px;background:#16A34A;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">설치</button>
-    <button onclick="document.getElementById('installBanner').style.display='none'" style="background:none;border:none;font-size:20px;color:#94A3B8;cursor:pointer;padding:0 4px;">✕</button>
+    <button onclick="document.getElementById('installBanner').style.display='none'" style="background:none;border:none;font-size:20px;color:#94A3B8;cursor:pointer;padding:0 4px;" title="이번에만 닫기 (다음 방문시 다시 표시)">✕</button>
   </div>
 </div>
 
@@ -1280,13 +1280,23 @@ if('serviceWorker' in navigator){
 
 // 앱 설치 프롬프트
 let deferredPrompt;
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+
+if(!isStandalone){
+  // 이미 설치된 상태가 아니면 항상 배너 표시
+  document.getElementById('installBanner').style.display='block';
+}
+
 window.addEventListener('beforeinstallprompt', e=>{
   e.preventDefault();
   deferredPrompt = e;
-  document.getElementById('installBanner').style.display='block';
+  if(!isStandalone) document.getElementById('installBanner').style.display='block';
 });
 document.getElementById('installBtn')?.addEventListener('click', async ()=>{
-  if(!deferredPrompt) return;
+  if(!deferredPrompt){
+    alert('브라우저 메뉴(⋮) → "홈 화면에 추가"를 이용해주세요.');
+    return;
+  }
   deferredPrompt.prompt();
   const {outcome} = await deferredPrompt.userChoice;
   deferredPrompt = null;
