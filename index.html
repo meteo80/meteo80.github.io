@@ -173,9 +173,6 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
   </div>
 </div>
 
-<!-- 골프장 드롭다운 (카드 밖, body에 직접) -->
-<div id="golfSuggest" style="display:none;position:fixed;z-index:500;background:#fff;border:1.5px solid #16A34A;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.2);max-height:300px;overflow-y:auto;left:16px;right:16px;"></div>
-
 <!-- 입력 화면 -->
 <div id="inputScreen" class="screen active">
   <div class="header">
@@ -215,7 +212,9 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
             oninput="onGolfNameInput(this.value)"
             onfocus="onGolfNameInput(this.value)"
             oncompositionend="setTimeout(()=>onGolfNameInput(document.getElementById('golfName').value),100)"
-            onkeydown="if(event.key==='Enter'){document.getElementById('golfSuggest').style.display='none';handleGenerate();}">
+            onkeydown="if(event.key==='Enter'){document.getElementById('golfSuggest').innerHTML='';handleGenerate();}">
+        <!-- 인라인 결과 - 페이지 흐름 안에 표시 -->
+        <div id="golfSuggest" style="margin-top:6px;border-radius:12px;overflow:hidden;border:1.5px solid #86EFAC;display:none;"></div>
       </div>
     </div>
     <div class="field">
@@ -878,19 +877,14 @@ const GOLF_DB = [
   {name:'광주CC',addr:'경기 광주시'},{name:'화성CC',addr:'경기 화성시'},
 ];
 
-// ── 골프장명 자동완성 (인라인 목록) ──
-let ddTimer = null;
+// ── 골프장명 자동완성 ──
 let selectedPlace = null;
 
 function onGolfNameInput(val){
   selectedPlace = null;
-function onGolfNameInput(val){
-  selectedPlace = null;
-  clearTimeout(ddTimer);
   const realVal = document.getElementById('golfName').value.trim();
   const sg = document.getElementById('golfSuggest');
   if(!realVal){ sg.style.display='none'; sg.innerHTML=''; return; }
-  // 즉시 필터링 (딜레이 없음)
   const filtered = GOLF_DB.filter(g=>g.name.includes(realVal)||g.addr.includes(realVal)).slice(0,10);
   if(!filtered.length){ sg.style.display='none'; return; }
   window._ddPlaces = filtered.map(g=>({place_name:g.name, address_name:g.addr}));
@@ -904,12 +898,7 @@ function onGolfNameInput(val){
       </div>
       <span style="font-size:11px;background:#F0FDF4;color:#16A34A;border-radius:6px;padding:3px 8px;font-weight:700;margin-left:8px;flex-shrink:0;">${getRegionLabel(g.addr)}</span>
     </a>`).join('');
-  const input = document.getElementById('golfName');
-  const rect = input.getBoundingClientRect();
-  sg.style.top = (rect.bottom + 4) + 'px';
-  sg.style.left = '16px';
-  sg.style.right = '16px';
-  sg.style.display = 'block';
+  sg.style.display='block';
 }
 
 function selectPlace(idx){
@@ -918,14 +907,12 @@ function selectPlace(idx){
   selectedPlace = {place_name:place.place_name, address_name:place.address_name};
   state.searchTab = 'name';
   state.targetGolfAddr = place.address_name;
-  // 검색어는 골프장 이름에서 핵심 키워드만 추출 (예: "보라CC" → "보라")
   const keyword = place.place_name.replace(/CC$|컨트리클럽$|골프클럽$|골프장$|리조트$/, '').trim();
   document.getElementById('golfName').value = keyword;
   document.getElementById('golfSuggest').style.display='none';
   handleGenerate();
 }
 
-// 외부 클릭 시 목록 닫기
 document.addEventListener('click', e=>{
   const sg = document.getElementById('golfSuggest');
   if(sg && !sg.contains(e.target) && e.target.id !== 'golfName'){
