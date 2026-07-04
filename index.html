@@ -484,7 +484,7 @@ async function handleGenerate(){
 
   let prompt;
   if(searchType === 'name'){
-    const addrHint = state.targetGolfAddr ? ` (${state.targetGolfAddr} 지역 우선)` : '';
+    const addrHint = state.targetGolfAddr ? `\n반드시 "${state.targetGolfAddr}" 주소의 골프장을 rank1로 포함.` : '';
     state.targetGolfAddr = null;
     state.targetGolfName = null;
     prompt=`한국 골프장 전문가. 이름에 "${golfName}"이 포함된 전국 골프장을 JSON으로만 반환. 마크다운 없이 순수 JSON만.
@@ -819,11 +819,11 @@ async function loadKakaoPhone(c, i){
 // 주소에서 시/도 짧게 추출 (예: "경기", "울산", "부산")
 function getRegionLabel(address){
   if(!address) return '';
-  const m = address.match(/^([가-힣]+(?:특별시|광역시|특별자치시|특별자치도|도|시))/);
-  if(!m) return '';
-  return m[1]
+  // "울산 울주군..." → "울산", "경기 용인시..." → "경기" 등 첫 단어 반환
+  const first = address.split(' ')[0];
+  return first
     .replace('특별시','').replace('광역시','').replace('특별자치시','')
-    .replace('특별자치도','').replace('도','').replace(/시$/,'');
+    .replace('특별자치도','').replace('도','').replace(/시$/, '');
 }
 
 // ── 한국 골프장 내장 DB ──
@@ -915,9 +915,9 @@ function selectPlace(idx){
   if(!place) return;
   selectedPlace = {place_name:place.name, address_name:place.addr};
   state.searchTab = 'name';
+  state.targetGolfName = place.name;
   state.targetGolfAddr = place.addr;
-  const keyword = place.name.replace(/CC$|컨트리클럽$|골프클럽$|골프장$|리조트$/, '').trim();
-  document.getElementById('golfName').value = keyword;
+  document.getElementById('golfName').value = place.name; // 전체 이름 사용
   document.getElementById('golfSuggest').style.display='none';
   handleGenerate();
 }
