@@ -490,7 +490,7 @@ async function handleGenerate(){
   const errEl=document.getElementById('regionError');
   const searchType = state.searchTab || 'region';
   const region = document.getElementById('region').value.trim();
-  const golfName = document.getElementById('golfName').value.trim();
+  const golfName = document.getElementById('golfName').value.trim().replace(/\([^)]*\)\s*$/,'').trim();
   const query = searchType === 'name' ? golfName : region;
 
   if(!query){ errEl.textContent='지역 또는 골프장명을 입력해 주세요 📍'; errEl.style.display='block'; return; }
@@ -1226,7 +1226,8 @@ function selectPlace(idx){
   state.searchTab = 'name';
   state.targetGolfName = place.name;
   state.targetGolfAddr = place.addr;
-  document.getElementById('golfName').value = place.name; // 전체 이름 사용
+  const region = getRegionLabel(place.addr);
+  document.getElementById('golfName').value = region ? `${place.name}(${region})` : place.name;
   document.getElementById('golfSuggest').style.display='none';
   // 즉시 검색하지 않고, 사용자가 하단 검색 버튼을 눌러야 실행됨
 }
