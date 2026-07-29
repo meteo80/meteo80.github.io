@@ -173,6 +173,15 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
   </div>
 </div>
 
+<!-- 앱 설치 안내 모달 -->
+<div id="installGuideModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:999;align-items:center;justify-content:center;padding:20px;">
+  <div class="modal-box" style="max-width:380px;">
+    <h2 id="igTitle">📲 앱 설치 방법</h2>
+    <div id="igSteps" style="margin:16px 0;display:flex;flex-direction:column;gap:12px;"></div>
+    <button class="modal-btn" onclick="document.getElementById('installGuideModal').style.display='none'">확인했어요</button>
+  </div>
+</div>
+
 <!-- 입력 화면 -->
 <div id="inputScreen" class="screen active">
   <div class="header">
@@ -195,7 +204,7 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
         <div style="font-size:11.5px;color:#4B7A5C;margin-top:2px;">그린피·예약정보 없이 이름·주소만 즉시 표시 (API 소모 없음)</div>
       </div>
       <label style="position:relative;display:inline-block;width:44px;height:26px;flex-shrink:0;">
-        <input type="checkbox" id="quickModeToggle" style="opacity:0;width:0;height:0;">
+        <input type="checkbox" id="quickModeToggle" checked style="opacity:0;width:0;height:0;">
         <span id="toggleTrack" style="position:absolute;cursor:pointer;inset:0;background:#CBD5E1;border-radius:999px;transition:.2s;"></span>
         <span id="toggleKnob" style="position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
       </label>
@@ -1396,36 +1405,44 @@ function detectBrowserGuide(){
   const isFirefox = /Firefox/i.test(ua);
   const isChrome = /Chrome/i.test(ua) && !isSamsung && !isWhale;
   const isIOS = /iPhone|iPad|iPod/i.test(ua);
-  const isAndroid = /Android/i.test(ua);
 
-  // 카카오톡/네이버/인스타/페북/라인 등 인앱 브라우저는 설치 자체가 원천 차단됨
   if(isKakao||isNaverApp||isInstagram||isFacebook||isLine){
     return {
-      blocked:true,
-      msg:'⚠️ 지금 브라우저(카카오톡·네이버·인스타 등 인앱 브라우저)에서는\n앱 설치가 지원되지 않아요.\n\n오른쪽 위 ⋮ 또는 "다른 브라우저로 열기"를 눌러\nChrome이나 삼성 인터넷으로 열어주세요.'
+      title:'⚠️ 이 브라우저에서는 설치가 안 돼요',
+      warn:'카카오톡·네이버·인스타그램 등 인앱 브라우저는 앱 설치를 지원하지 않아요.',
+      steps:['오른쪽 위 ⋮ 또는 "다른 브라우저로 열기" 탭','Chrome이나 삼성 인터넷으로 열기','그 브라우저에서 다시 설치 버튼 누르기']
     };
   }
-
   if(isIOS){
-    return {
-      blocked:false,
-      msg:'📱 iOS Safari 안내\n\n하단 공유 버튼(⬆️) 탭 →\n"홈 화면에 추가" 선택해주세요.\n\n(iOS는 Chrome에서 열어도 이 방식으로만 설치돼요)'
-    };
+    return { title:'📱 iOS Safari 설치 방법', warn:'', steps:['하단 공유 버튼(⬆️) 탭','"홈 화면에 추가" 선택','오른쪽 위 "추가" 탭'] };
   }
-
   if(isSamsung){
-    return { blocked:false, msg:'📱 삼성 인터넷 안내\n\n하단 메뉴(☰) 탭 →\n"홈 화면에 추가" 선택해주세요.' };
+    return { title:'📱 삼성 인터넷 설치 방법', warn:'"홈 화면에 추가"가 아니라 "현재 페이지 추가"를 찾으셔야 해요!', steps:['오른쪽 위 ⋮ (메뉴) 탭','"현재 페이지 추가" 탭','"홈 화면" 선택'] };
   }
   if(isWhale){
-    return { blocked:false, msg:'🐳 웨일 브라우저 안내\n\n오른쪽 위 ≡ 메뉴 →\n"홈 화면에 추가" 선택해주세요.' };
+    return { title:'🐳 웨일 브라우저 설치 방법', warn:'', steps:['오른쪽 위 ≡ 메뉴 탭','"홈 화면에 추가" 선택'] };
   }
   if(isFirefox){
-    return { blocked:false, msg:'🦊 Firefox 안내\n\n오른쪽 위 ⋮ 메뉴 →\n"홈 화면에 설치" 선택해주세요.\n(Firefox는 일부 기기에서 미지원일 수 있어요)' };
+    return { title:'🦊 Firefox 설치 방법', warn:'일부 기기에서는 미지원일 수 있어요.', steps:['오른쪽 위 ⋮ 메뉴 탭','"홈 화면에 설치" 선택'] };
   }
   if(isChrome){
-    return { blocked:false, msg:'✅ Chrome 안내\n\n오른쪽 위 ⋮ 메뉴 →\n"앱 설치" 또는 "홈 화면에 추가"를 선택해주세요.\n\n메뉴가 안 보이면 이 페이지를 몇 번 더 방문한 뒤 다시 시도해보세요.' };
+    return { title:'✅ Chrome 설치 방법', warn:'메뉴가 안 보이면 이 페이지를 몇 번 더 방문한 뒤 다시 시도해보세요.', steps:['오른쪽 위 ⋮ 메뉴 탭','"앱 설치" 또는 "홈 화면에 추가" 선택'] };
   }
-  return { blocked:false, msg:'브라우저 메뉴(⋮ 또는 ≡) → "홈 화면에 추가"를 이용해주세요.' };
+  return { title:'📲 설치 방법', warn:'', steps:['브라우저 메뉴(⋮ 또는 ≡) 열기','"홈 화면에 추가" 선택'] };
+}
+
+function showInstallGuide(){
+  const guide = detectBrowserGuide();
+  document.getElementById('igTitle').textContent = guide.title;
+  const stepsHtml = guide.steps.map((s,i)=>
+    `<div style="display:flex;gap:10px;align-items:flex-start;">
+      <span style="flex-shrink:0;width:22px;height:22px;border-radius:50%;background:#16A34A;color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;">${i+1}</span>
+      <span style="font-size:14px;color:#1E293B;line-height:1.5;padding-top:2px;">${s}</span>
+    </div>`
+  ).join('');
+  const warnHtml = guide.warn ? `<div style="background:#FEF3C7;border-radius:10px;padding:10px 12px;font-size:12.5px;color:#92400E;margin-bottom:14px;">⚠️ ${guide.warn}</div>` : '';
+  document.getElementById('igSteps').innerHTML = warnHtml + stepsHtml;
+  document.getElementById('installGuideModal').style.display = 'flex';
 }
 
 window.addEventListener('beforeinstallprompt', e=>{
@@ -1435,8 +1452,7 @@ window.addEventListener('beforeinstallprompt', e=>{
 });
 document.getElementById('installBtn')?.addEventListener('click', async ()=>{
   if(!deferredPrompt){
-    const guide = detectBrowserGuide();
-    alert(guide.msg);
+    showInstallGuide();
     return;
   }
   deferredPrompt.prompt();
