@@ -188,6 +188,19 @@ body{font-family:'Apple SD Gothic Neo','Pretendard','Noto Sans KR',sans-serif;mi
       <input type="date" id="playDate">
     </div>
 
+    <!-- AI 없이 빠른 검색 토글 -->
+    <div style="display:flex;align-items:center;justify-content:space-between;background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:12px;padding:12px 14px;margin-bottom:16px;">
+      <div>
+        <div style="font-size:13.5px;font-weight:700;color:#166534;">⚡ AI 없이 빠른 검색</div>
+        <div style="font-size:11.5px;color:#4B7A5C;margin-top:2px;">그린피·예약정보 없이 이름·주소만 즉시 표시 (API 소모 없음)</div>
+      </div>
+      <label style="position:relative;display:inline-block;width:44px;height:26px;flex-shrink:0;">
+        <input type="checkbox" id="quickModeToggle" style="opacity:0;width:0;height:0;">
+        <span id="toggleTrack" style="position:absolute;cursor:pointer;inset:0;background:#CBD5E1;border-radius:999px;transition:.2s;"></span>
+        <span id="toggleKnob" style="position:absolute;height:20px;width:20px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);"></span>
+      </label>
+    </div>
+
     <!-- 검색 타입 탭 -->
     <div style="display:flex;background:#F1F5F9;border-radius:12px;padding:4px;margin-bottom:20px;gap:4px;">
       <button id="tab-region" onclick="switchTab('region')"
@@ -416,6 +429,22 @@ window.addEventListener('DOMContentLoaded', ()=>{
   const today = new Date();
   document.getElementById('playDate').value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
+  // 빠른 검색 토글 시각 반영
+  const qToggle = document.getElementById('quickModeToggle');
+  const qTrack = document.getElementById('toggleTrack');
+  const qKnob = document.getElementById('toggleKnob');
+  function updateToggleVisual(){
+    if(qToggle.checked){
+      qTrack.style.background = '#16A34A';
+      qKnob.style.left = '21px';
+    } else {
+      qTrack.style.background = '#CBD5E1';
+      qKnob.style.left = '3px';
+    }
+  }
+  qToggle?.addEventListener('change', updateToggleVisual);
+  updateToggleVisual();
+
   document.querySelectorAll('.toggle-btn[data-t]').forEach(b=>{
     b.addEventListener('click',()=>{ state.teeTime=b.dataset.t; document.querySelectorAll('.toggle-btn[data-t]').forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); });
   });
@@ -496,11 +525,57 @@ async function handleGenerate(){
 
   if(!query){ errEl.textContent='지역 또는 골프장명을 입력해 주세요 📍'; errEl.style.display='block'; return; }
   errEl.style.display='none';
-  const apiKey=getApiKey();
-  if(!apiKey){ showKeyModal(); return; }
 
   const dateVal=document.getElementById('playDate').value;
   const dateStr=dateVal?new Date(dateVal).toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'}):'미정';
+
+  // ── AI 없이 빠른 검색 모드 (내장 DB만 사용, API 호출 없음) ──
+  const quickMode = document.getElementById('quickModeToggle')?.checked;
+  if(quickMode){
+    showScreen('loadingScreen');
+    startLoadAnim(query);
+
+    let matches;
+    if(searchType === 'name'){
+      matches = GOLF_DB.filter(g=>g.name.includes(golfName)||g.addr.includes(golfName));
+    } else {
+      matches = GOLF_DB.filter(g=>g.addr.includes(region)||region.includes(g.addr.split(' ')[0]));
+    }
+    matches = matches.slice(0, state.count||10);
+
+    const courses = matches.map((g,i)=>({
+      rank:i+1,
+      name:g.name,
+      type:'정보없음',
+      address:g.addr,
+      distanceFromCenter:'-',
+      holes:'-',
+      par:'-',
+      yardage:'-',
+      difficulty:'-',
+      features:[],
+      greenFee:{weekday:'문의',weekend:'문의',weekdayNum:0,weekendNum:0,cartFee:'문의',caddyFee:'문의'},
+      totalEstimate:'그린피 등 상세정보는 골프장에 직접 문의해주세요',
+      reservation:{method:'전화 문의',phone:'',advanceBooking:'-',availability:'-',tip:'빠른 검색 모드에서는 상세 예약정보를 제공하지 않아요'},
+      facilities:[],
+      restaurants:[],
+      recommended:i===0,
+      recommendReason:'내장 DB 매칭 결과 (AI 미사용)'
+    }));
+
+    state.plan = {
+      region: searchType==='name' ? golfName : region,
+      searchDate: dateStr,
+      summary: `'${query}' 빠른 검색 결과 (${courses.length}곳 · AI 미사용)`,
+      tags:['빠른검색','AI미사용', query],
+      courses
+    };
+    setTimeout(()=>{ stopLoadAnim(); renderResult(); }, 400);
+    return;
+  }
+
+  const apiKey=getApiKey();
+  if(!apiKey){ showKeyModal(); return; }
 
   showScreen('loadingScreen');
   startLoadAnim(query);
