@@ -570,7 +570,7 @@ async function handleGenerate(){
       tags:['빠른검색','AI미사용', query],
       courses
     };
-    setTimeout(()=>{ stopLoadAnim(); renderResult(); }, 400);
+    setTimeout(()=>{ stopLoadAnim(); showScreen('resultScreen'); renderResult(); }, 400);
     return;
   }
 
