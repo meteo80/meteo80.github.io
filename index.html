@@ -1384,6 +1384,50 @@ if(!isStandalone){
   document.getElementById('installBanner').style.display='block';
 }
 
+function detectBrowserGuide(){
+  const ua = navigator.userAgent;
+  const isKakao = /KAKAOTALK/i.test(ua);
+  const isNaverApp = /NAVER\(inapp/i.test(ua) || /naver_app/i.test(ua);
+  const isInstagram = /Instagram/i.test(ua);
+  const isFacebook = /FBAN|FBAV/i.test(ua);
+  const isLine = /Line\//i.test(ua);
+  const isSamsung = /SamsungBrowser/i.test(ua);
+  const isWhale = /Whale/i.test(ua);
+  const isFirefox = /Firefox/i.test(ua);
+  const isChrome = /Chrome/i.test(ua) && !isSamsung && !isWhale;
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+
+  // 카카오톡/네이버/인스타/페북/라인 등 인앱 브라우저는 설치 자체가 원천 차단됨
+  if(isKakao||isNaverApp||isInstagram||isFacebook||isLine){
+    return {
+      blocked:true,
+      msg:'⚠️ 지금 브라우저(카카오톡·네이버·인스타 등 인앱 브라우저)에서는\n앱 설치가 지원되지 않아요.\n\n오른쪽 위 ⋮ 또는 "다른 브라우저로 열기"를 눌러\nChrome이나 삼성 인터넷으로 열어주세요.'
+    };
+  }
+
+  if(isIOS){
+    return {
+      blocked:false,
+      msg:'📱 iOS Safari 안내\n\n하단 공유 버튼(⬆️) 탭 →\n"홈 화면에 추가" 선택해주세요.\n\n(iOS는 Chrome에서 열어도 이 방식으로만 설치돼요)'
+    };
+  }
+
+  if(isSamsung){
+    return { blocked:false, msg:'📱 삼성 인터넷 안내\n\n하단 메뉴(☰) 탭 →\n"홈 화면에 추가" 선택해주세요.' };
+  }
+  if(isWhale){
+    return { blocked:false, msg:'🐳 웨일 브라우저 안내\n\n오른쪽 위 ≡ 메뉴 →\n"홈 화면에 추가" 선택해주세요.' };
+  }
+  if(isFirefox){
+    return { blocked:false, msg:'🦊 Firefox 안내\n\n오른쪽 위 ⋮ 메뉴 →\n"홈 화면에 설치" 선택해주세요.\n(Firefox는 일부 기기에서 미지원일 수 있어요)' };
+  }
+  if(isChrome){
+    return { blocked:false, msg:'✅ Chrome 안내\n\n오른쪽 위 ⋮ 메뉴 →\n"앱 설치" 또는 "홈 화면에 추가"를 선택해주세요.\n\n메뉴가 안 보이면 이 페이지를 몇 번 더 방문한 뒤 다시 시도해보세요.' };
+  }
+  return { blocked:false, msg:'브라우저 메뉴(⋮ 또는 ≡) → "홈 화면에 추가"를 이용해주세요.' };
+}
+
 window.addEventListener('beforeinstallprompt', e=>{
   e.preventDefault();
   deferredPrompt = e;
@@ -1391,7 +1435,8 @@ window.addEventListener('beforeinstallprompt', e=>{
 });
 document.getElementById('installBtn')?.addEventListener('click', async ()=>{
   if(!deferredPrompt){
-    alert('브라우저 메뉴(⋮) → "홈 화면에 추가"를 이용해주세요.');
+    const guide = detectBrowserGuide();
+    alert(guide.msg);
     return;
   }
   deferredPrompt.prompt();
